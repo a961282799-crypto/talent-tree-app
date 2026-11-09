@@ -1,0 +1,21 @@
+node_modules/
+dist/
+dist-preview/
+*.bak
+*.tmp
+.DS_Store
+# Capacitor / native build output
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+*.keystore
+*.jks
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+
+# Signing key: never commit it. Keep a backup somewhere safe.
+release-key/
+.env.local

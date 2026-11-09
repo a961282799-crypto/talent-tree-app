@@ -1,0 +1,15 @@
+Copyright (c) 2026 Tao. All rights reserved.
+
+The source code in this repository is published for viewing and learning only.
+No permission is granted to copy, modify, redistribute, sublicense or sell this
+software or any part of it, or to publish apps built from it, without the prior
+written permission of the author.
+
+The talent-tree logic (src/graph.js) and parts of src/tutor.js and src/tree.js
+come from the author's own plugin dsh-talent-tree
+(https://github.com/a961282799-crypto/dsh-talent-tree), which remains available
+under the MIT License in that repository.
+
+版权所有 (c) 2026 Tao，保留所有权利。
+本仓库源码仅供查看和学习。未经作者书面许可，不得复制、修改、再发布、转授权或出售本软件
+或其任何部分，也不得发布基于本软件构建的应用。

@@ -1,0 +1,12 @@
+{
+  "appId": "com.tao.talenttree",
+  "appName": "学习天赋树",
+  "webDir": "dist",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "never" },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true },
+    "Keyboard": { "resize": "body", "resizeOnFullScreen": true },
+    "SplashScreen": { "launchShowDuration": 0 }
+  }
+}
