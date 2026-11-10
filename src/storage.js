@@ -232,13 +232,19 @@ export function exportData() {
   return { app: 'talent-tree', version: 1, exportedAt: new Date().toISOString(), knowledge: state.knowledge }
 }
 
-/** Replace the knowledge map with an exported one. Returns the node count. */
-export function importData(data) {
+/** Check an exported file and return the knowledge map in it, without changing anything. Throws when invalid. */
+export function parseImport(data) {
   const knowledge = data && data.knowledge ? data.knowledge : data
-  if (!knowledge || typeof knowledge.nodes !== 'object' || Array.isArray(knowledge.nodes)) throw new Error('invalid data')
+  if (!knowledge || typeof knowledge.nodes !== 'object' || knowledge.nodes === null || Array.isArray(knowledge.nodes)) throw new Error('invalid data')
   for (const node of Object.values(knowledge.nodes)) {
     if (!node || typeof node.id !== 'string' || !Array.isArray(node.prerequisites)) throw new Error('invalid node')
   }
+  return knowledge
+}
+
+/** Replace the knowledge map with an exported one. Returns the node count. */
+export function importData(data) {
+  const knowledge = parseImport(data)
   setKnowledge({ version: 1, ...knowledge })
   return Object.keys(knowledge.nodes).length
 }

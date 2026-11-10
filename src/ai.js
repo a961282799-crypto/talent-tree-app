@@ -75,23 +75,42 @@ export function createAccumulator() {
 
 const endpoint = baseUrl => `${baseUrl.trim().replace(/\/+$/, '')}/chat/completions`
 
-// With CapacitorHttp on, window.fetch goes through native code (no CORS, but the
-// body arrives in one piece). The WebView's own fetch streams but needs CORS, so
-// try it first and fall back for good if the provider blocks it.
-let webFetchWorks = true
-
-async function post(url, init) {
-  const webFetch = typeof window !== 'undefined' && window.CapacitorWebFetch
-  if (webFetch && webFetchWorks) {
-    try {
-      return await webFetch(url, init)
-    } catch (error) {
-      if (error?.name === 'AbortError') throw error
-      webFetchWorks = false
-    }
-  }
-  return fetch(url, init)
+const originOf = url => {
+  try { return new URL(url).origin } catch { return url }
 }
+
+/**
+ * Build the request function. With CapacitorHttp on, window.fetch goes through
+ * native code (no CORS, but the body arrives in one piece). The WebView's own
+ * fetch streams but needs CORS, so it is tried first. When it fails, the native
+ * fetch is tried: if that one gets through, the provider blocks the WebView
+ * (CORS) and its address skips the WebView from then on; if it fails too, the
+ * network was down and nothing is remembered, so streaming comes back once the
+ * connection does.
+ * @param {() => ((url: string, init: object) => Promise<Response>) | undefined} getWebFetch
+ * @param {(url: string, init: object) => Promise<Response>} nativeFetch
+ */
+export function makePost(getWebFetch, nativeFetch) {
+  const blocked = new Set()
+  return async function post(url, init) {
+    const webFetch = getWebFetch()
+    const origin = originOf(url)
+    if (webFetch && !blocked.has(origin)) {
+      try {
+        return await webFetch(url, init)
+      } catch (error) {
+        if (error?.name === 'AbortError') throw error
+        const response = await nativeFetch(url, init)
+        // Only a successful reply proves CORS was the problem: error replies often lack CORS headers.
+        if (response.ok) blocked.add(origin)
+        return response
+      }
+    }
+    return nativeFetch(url, init)
+  }
+}
+
+const post = makePost(() => (typeof window !== 'undefined' ? window.CapacitorWebFetch : undefined), (url, init) => fetch(url, init))
 
 /**
  * One chat-completions request. `settings` is the active service: { apiKey, baseUrl, model }.

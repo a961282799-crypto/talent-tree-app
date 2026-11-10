@@ -144,3 +144,63 @@ test('settings from version 1.0 move into the DeepSeek slot', async () => {
   assert.equal(kept.provider, 'glm')
   assert.equal(kept.language, 'en')
 })
+
+test('a network drop does not switch streaming off; a provider that blocks the WebView does', async () => {
+  const { makePost } = await import('../src/ai.js')
+  const calls = []
+  let online = false
+  const web = async url => { calls.push(`web ${url}`); if (!online || url.includes('cors')) throw new TypeError('Failed to fetch'); return { ok: true, via: 'web' } }
+  const native = async url => { calls.push(`native ${url}`); if (!online) throw new TypeError('offline'); return { ok: true, via: 'native' } }
+  const post = makePost(() => web, native)
+
+  // Offline: both fail, so nothing is learned about the provider.
+  await assert.rejects(post('https://a.example/v1/chat/completions', {}))
+  online = true
+  assert.equal((await post('https://a.example/v1/chat/completions', {})).via, 'web')
+
+  // A provider without CORS: the native fetch gets through, and that address skips the WebView afterwards.
+  assert.equal((await post('https://cors.example/v1/chat/completions', {})).via, 'native')
+  calls.length = 0
+  assert.equal((await post('https://cors.example/v1/chat/completions', {})).via, 'native')
+  assert.deepEqual(calls, ['native https://cors.example/v1/chat/completions'])
+  // Other providers still stream.
+  assert.equal((await post('https://a.example/v1/chat/completions', {})).via, 'web')
+})
+
+test('an error reply from the native fetch does not mark the provider as blocked', async () => {
+  const { makePost } = await import('../src/ai.js')
+  let key = 'bad'
+  const web = async () => { if (key === 'bad') throw new TypeError('Failed to fetch'); return { ok: true, via: 'web' } }
+  const native = async () => (key === 'bad' ? { ok: false, status: 401, via: 'native' } : { ok: true, via: 'native' })
+  const post = makePost(() => web, native)
+  assert.equal((await post('https://a.example/x', {})).status, 401)
+  key = 'good'
+  assert.equal((await post('https://a.example/x', {})).via, 'web')
+})
+
+test('an aborted request is not retried', async () => {
+  const { makePost } = await import('../src/ai.js')
+  let nativeCalls = 0
+  const abort = Object.assign(new Error('aborted'), { name: 'AbortError' })
+  const post = makePost(() => async () => { throw abort }, async () => { nativeCalls++; return { ok: true } })
+  await assert.rejects(post('https://a.example/x', {}), { name: 'AbortError' })
+  assert.equal(nativeCalls, 0)
+})
+
+test('import files are checked before anything is replaced', async () => {
+  const { parseImport, importData, getState, setKnowledge } = await import('../src/storage.js')
+  const exported = { app: 'talent-tree', version: 1, knowledge: { nodes: { a: { id: 'a', name: 'A', prerequisites: [] } } } }
+  assert.deepEqual(Object.keys(parseImport(exported).nodes), ['a'])
+  for (const bad of [null, {}, { nodes: null }, { nodes: [] }, { knowledge: { nodes: { x: { name: 'no id' } } } }]) {
+    assert.throws(() => parseImport(bad))
+  }
+  const before = { version: 1, nodes: { keep: { id: 'keep', name: 'Keep', prerequisites: [] } } }
+  setKnowledge(before)
+  // Checking alone changes nothing.
+  parseImport(exported)
+  assert.equal(getState().knowledge, before)
+  assert.throws(() => importData({ nodes: [] }))
+  assert.equal(getState().knowledge, before)
+  assert.equal(importData(exported), 1)
+  assert.deepEqual(Object.keys(getState().knowledge.nodes), ['a'])
+})

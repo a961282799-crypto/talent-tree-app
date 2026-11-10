@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { clearAll, exportData, importData, updateProvider, updateSettings, useApp } from '../storage.js'
+import { clearAll, exportData, getState, importData, parseImport, updateProvider, updateSettings, useApp } from '../storage.js'
 import { testConnection } from '../ai.js'
 import { useNav } from '../nav.js'
 import { PROVIDERS, activeAI, providerById, providerName } from '../providers.js'
@@ -50,12 +50,20 @@ export function Settings() {
     const f = event.target.files?.[0]
     event.target.value = ''
     if (!f) return
+    let data
+    let incoming
     try {
-      const n = importData(JSON.parse(await f.text()))
-      nav.toast(fill(t('settings.imported'), { n }))
+      data = JSON.parse(await f.text())
+      incoming = Object.keys(parseImport(data).nodes).length
     } catch {
       nav.toast(t('settings.importFailed'))
+      return
     }
+    // Importing replaces the whole map: ask first when there is progress to lose.
+    const current = Object.keys(getState().knowledge.nodes).length
+    if (current > 0 && !(await confirmAction(fill(t('settings.importConfirm'), { n: incoming, current })))) return
+    const n = importData(data)
+    nav.toast(fill(t('settings.imported'), { n }))
   }
 
   const doClear = async () => {
