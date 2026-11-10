@@ -11,6 +11,7 @@ import { TreeScreen } from './screens/TreeScreen.jsx'
 import { Chat } from './screens/Chat.jsx'
 import { Chats } from './screens/Chats.jsx'
 import { Settings } from './screens/Settings.jsx'
+import { Onboarding } from './screens/Onboarding.jsx'
 
 const TABS = [
   { id: 'trees', icon: TreeIcon, label: 'tab.trees' },
@@ -50,6 +51,8 @@ export function App() {
   const top = stack[stack.length - 1]
   // Changing the language re-mounts the screens (tab and stack are kept) so every label updates.
   const language = useApp(s => s.settings.language ?? 'system')
+  // First run: the guide shows until finished or skipped. People upgrading from 1.0 already have data and skip it.
+  const onboarding = useApp(s => !s.settings.onboarded && (Boolean(import.meta.env.VITE_DEMO) || (Object.keys(s.knowledge.nodes).length === 0 && Object.keys(s.chats).length === 0)))
   return (
     <NavContext.Provider value={nav}>
       <div className="app" key={language}>
@@ -72,6 +75,7 @@ export function App() {
             {top.type === 'chat' && <Chat chatId={top.chatId} />}
           </div>
         )}
+        {onboarding && <Onboarding />}
         {toast && <div className="app-toast" key={toast.key} role="status">{toast.text}</div>}
       </div>
     </NavContext.Provider>

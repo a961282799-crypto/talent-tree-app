@@ -24,6 +24,9 @@ export function Settings() {
   const active = activeAI(settings)
   const own = settings.providers?.[preset.id] ?? {}
   const custom = preset.id === 'custom'
+  // The free-text model field shows for a model outside the suggestions, or when asked for.
+  const [other, setOther] = useState(false)
+  const otherOpen = preset.models.length === 0 || other || Boolean(own.model && !preset.models.includes(own.model))
   const reset = () => setTest({ status: 'idle', message: '' })
   const setOwn = patch => { updateProvider(preset.id, patch); reset() }
 
@@ -69,7 +72,7 @@ export function Settings() {
         <div className="group">
           <label className="field">
             <span>{t('settings.provider')}</span>
-            <select value={preset.id} onChange={e => { updateSettings({ provider: e.target.value }); setShow(false); reset() }}>
+            <select value={preset.id} onChange={e => { updateSettings({ provider: e.target.value }); setShow(false); setOther(false); reset() }}>
               {PROVIDERS.map(p => <option key={p.id} value={p.id}>{providerName(p, lang)}</option>)}
             </select>
           </label>
@@ -95,20 +98,23 @@ export function Settings() {
             {preset.models.length > 0 && (
               <div className="model-chips" role="radiogroup" aria-label={t('settings.model')}>
                 {preset.models.map(m => (
-                  <button key={m} type="button" role="radio" aria-checked={active.model === m} className={`chip${active.model === m ? ' chip-on' : ''}`} onClick={() => setOwn({ model: m === preset.models[0] ? '' : m })}>
+                  <button key={m} type="button" role="radio" aria-checked={!otherOpen && active.model === m} className={`chip${!otherOpen && active.model === m ? ' chip-on' : ''}`} onClick={() => { setOther(false); setOwn({ model: m === preset.models[0] ? '' : m }) }}>
                     {m}
                   </button>
                 ))}
+                <button type="button" role="radio" aria-checked={otherOpen} className={`chip chip-other${otherOpen ? ' chip-on' : ''}`} onClick={() => setOther(true)}>{t('settings.model.otherChip')}</button>
               </div>
             )}
-            <input
-              autoComplete="off" autoCapitalize="off" spellCheck={false}
-              placeholder={preset.models[0] || t('settings.model.placeholder')}
-              value={own.model ?? ''}
-              aria-label={t('settings.model.other')}
-              onChange={e => setOwn({ model: e.target.value.trim() })}
-            />
-            <small className="hint">{t('settings.model.hint')}</small>
+            {otherOpen && (
+              <input
+                autoComplete="off" autoCapitalize="off" spellCheck={false} autoFocus={preset.models.length > 0}
+                placeholder={t('settings.model.placeholder')}
+                value={own.model ?? ''}
+                aria-label={t('settings.model.other')}
+                onChange={e => setOwn({ model: e.target.value.trim() })}
+              />
+            )}
+            {otherOpen && <small className="hint">{t('settings.model.hint')}</small>}
           </div>
 
           <label className="field">

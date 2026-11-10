@@ -8,6 +8,7 @@ import { send } from './ai.js'
 import { buzz } from './native.js'
 import { chatForGoal, createChat, getState } from './storage.js'
 import { fill, t } from './i18n.js'
+import { reviewPrompt } from './tree.js'
 
 export const NavContext = createContext(null)
 export const useNav = () => useContext(NavContext)
@@ -43,6 +44,15 @@ export function makeNav(setStack, setTab, toast) {
       const chat = createChat({ title: goal })
       nav.openChat(chat.id)
       send(chat.id, fill(t('goal.prompt'), { goal }), onToolEvent, fill(t('label.goal'), { goal }))
+    },
+
+    /** Review every due point across all goals in one new conversation. */
+    reviewAll(due) {
+      const ids = new Set(due.map(n => n.id))
+      const goals = libraryOf(getState().knowledge).filter(e => e.nodes.some(n => ids.has(n.id))).map(e => e.goal)
+      const chat = createChat({ goals, title: t('review.chatTitle') })
+      nav.openChat(chat.id)
+      send(chat.id, reviewPrompt(t, due), onToolEvent, fill(t('label.reviewBatch'), { n: due.length }))
     },
 
     /** A new, empty conversation. */

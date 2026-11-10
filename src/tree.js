@@ -1212,6 +1212,39 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
     })))
 }
 
+/** A tiny drawing of a tree for list cards: layout as on the canvas, coloured by progress. */
+function TreeThumb({ nodes, width = 84, height = 60 }) {
+  if (!nodes.length) return null
+  const { coords, width: W, height: H } = layout(nodes)
+  const pad = 5
+  const k = Math.min((width - pad * 2) / W, (height - pad * 2) / H)
+  const ox = (width - W * k) / 2
+  const oy = (height - H * k) / 2
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
+  const w = NODE_W * k
+  const hh = Math.max(NODE_H * k, 3)
+  const medal = ['', '#c8834c', '#93a4bd', '#eeb031']
+  return h('svg', { className: 'tt-thumb', width, height, viewBox: `0 0 ${width} ${height}`, 'aria-hidden': true },
+    nodes.flatMap(n => n.prerequisites.filter(p => coords[p]).map(p => {
+      const a = coords[p]
+      const b = coords[n.id]
+      const lit = (byId[p].mastery || 0) >= 1 && (n.mastery || 0) >= 1
+      return h('line', {
+        key: `${p}>${n.id}`, x1: ox + (a.x + NODE_W / 2) * k, y1: oy + (a.y + NODE_H) * k, x2: ox + (b.x + NODE_W / 2) * k, y2: oy + b.y * k,
+        stroke: lit ? medal[Math.min(byId[p].mastery, n.mastery)] : 'var(--tt-thumb-line)', strokeWidth: lit ? 1.3 : 1,
+      })
+    })),
+    nodes.map(n => {
+      const c = coords[n.id]
+      const state = stateOf(n, byId)
+      return h('rect', {
+        key: n.id, x: ox + c.x * k, y: oy + c.y * k, width: w, height: hh, rx: Math.min(hh / 2, 3),
+        fill: state === 'lit' ? medal[n.mastery] : state === 'available' ? 'var(--tt-thumb-avail)' : 'var(--tt-thumb-locked)',
+        stroke: state === 'available' ? 'var(--tt-thumb-avail-line)' : 'none', strokeWidth: 1,
+      })
+    }))
+}
+
 function Empty({ t, body }) {
   return h('div', { className: 'tt-empty' },
     h('div', { className: 'tt-empty-icon' }, h(TreeIcon, { size: 34 })),
@@ -1222,5 +1255,5 @@ function Empty({ t, body }) {
 export {
   TreeIcon, LockIcon, SparkIcon, StarIcon, FlagIcon, CloseIcon, ClockIcon, RefreshIcon, BoltIcon, TargetIcon,
   Rich, richToPlain, splitMath, texToUnicode, stateOf, fading, layout, closure, stats, ago, learningRoute, recommend, reviewQueue, reviewPrompt,
-  ProgressRing, Hero, Viewport, Stage, Empty, exportPng,
+  ProgressRing, Hero, Viewport, Stage, Empty, TreeThumb, exportPng,
 }
