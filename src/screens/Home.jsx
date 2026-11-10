@@ -6,6 +6,7 @@ import { libraryOf, useNav } from '../nav.js'
 import { fill, t } from '../i18n.js'
 import { ClockIcon, ProgressRing, Rich, SparkIcon, TreeIcon, TreeThumb, recommend, reviewQueue, richToPlain, stats } from '../tree.js'
 import { ChevronIcon, KeyIcon } from '../icons.jsx'
+import { MapCard } from './MapScreen.jsx'
 
 const MEDAL = ['', '#c8834c', '#93a4bd', '#eeb031']
 /** Points one review session covers; the rest wait for the next one. */
@@ -125,6 +126,7 @@ export function Home() {
         )}
 
         <h2 className="section-title">{t('library.title')}</h2>
+        <MapCard knowledge={knowledge} onOpen={nav.openMap} />
         {entries.length === 0
           ? <p className="muted pad">{t('library.empty')}</p>
           : (

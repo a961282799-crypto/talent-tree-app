@@ -37,6 +37,7 @@ export function makeNav(setStack, setTab, toast) {
     back: () => setStack(s => s.slice(0, -1)),
     openTree: (goals, chatId) => push({ type: 'tree', goals, chatId, key: Date.now() }),
     openChat: chatId => push({ type: 'chat', chatId, key: Date.now() }),
+    openMap: () => push({ type: 'map', key: Date.now() }),
     openSettings: () => { setStack([]); setTab('settings') },
 
     /** "我想学会 X": a new conversation that plans the tree. */

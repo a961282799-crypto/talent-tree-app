@@ -939,7 +939,7 @@ function TypeLegend({ t, nodes }) {
 const SPARKS = [0, 45, 90, 135, 180, 225, 270, 315]
 
 /** Nodes and edges of one tree, plus the hook bubble, in canvas coordinates. */
-function Graph({ t, nodes, goalIds, selected, hover, onSelect, onHover, now, coords, routeSteps, recommended, celebrate, view }) {
+function Graph({ t, nodes, goalIds, selected, hover, onSelect, onHover, now, coords, routeSteps, recommended, celebrate, view, shared }) {
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
   const focus = selected && byId[selected] ? related(nodes, selected) : null
   const width = Math.max(...nodes.map(n => coords[n.id].x + NODE_W), NODE_W)
@@ -1001,6 +1001,7 @@ function Graph({ t, nodes, goalIds, selected, hover, onSelect, onHover, now, coo
         onPointerLeave: () => onHover(null),
       },
       isGoal ? h('span', { className: 'tt-goal-tag' }, t('flag.goal')) : null,
+      shared && shared[n.id] > 1 ? h('span', { className: 'tt-shared', title: fill(t('map.sharedBy'), { n: shared[n.id] }) }, '🔗', shared[n.id]) : null,
       onRoute(n.id) ? h('span', { className: 'tt-step' }, routeSteps[n.id] + 1) : null,
       recommended === n.id ? h('span', { className: 'tt-rec' }, h('i', null, '▼'), t('flag.recommended')) : null,
       h(Badge, { state, node: n, isGoal }),
@@ -1039,18 +1040,19 @@ function Detail({ t, node, nodes, onJump, onClose, act, now, routeIds, alsoIn, o
     h('span', null, `${label}：`),
     list.length ? list.map(chip) : h('span', null, t('detail.none')))
   const vars = { name: richToPlain(node.name), id: node.id }
+  const actOn = (text, label) => act(text, label, node)
   const route = routeIds.map(id => byId[id]).filter(Boolean)
   const routeText = route.map((n, i) => `${i + 1}. ${richToPlain(n.name)}（${n.id}）`).join(' → ')
   const actions = []
   if (state === 'locked') {
-    actions.push(h('button', { key: 'route', type: 'button', className: 'tt-btn tt-btn-primary', onClick: () => act(fill(t('prompt.route'), { ...vars, route: routeText }), fill(t('label.route'), vars)) }, t('action.route')))
-    actions.push(h('button', { key: 'skip', type: 'button', className: 'tt-btn tt-btn-skip', onClick: () => act(fill(t('prompt.skip'), vars), fill(t('label.skip'), vars)) }, h(BoltIcon), t('action.skip')))
+    actions.push(h('button', { key: 'route', type: 'button', className: 'tt-btn tt-btn-primary', onClick: () => actOn(fill(t('prompt.route'), { ...vars, route: routeText }), fill(t('label.route'), vars)) }, t('action.route')))
+    actions.push(h('button', { key: 'skip', type: 'button', className: 'tt-btn tt-btn-skip', onClick: () => actOn(fill(t('prompt.skip'), vars), fill(t('label.skip'), vars)) }, h(BoltIcon), t('action.skip')))
   } else if (state === 'available') {
-    actions.push(h('button', { key: 'learn', type: 'button', className: 'tt-btn tt-btn-primary', onClick: () => act(fill(t('prompt.learn'), vars), fill(t('label.learn'), vars)) }, t('action.learn')))
-    actions.push(h('button', { key: 'check', type: 'button', className: 'tt-btn', onClick: () => act(fill(t('prompt.check'), vars), fill(t('label.check'), vars)) }, t('action.check')))
+    actions.push(h('button', { key: 'learn', type: 'button', className: 'tt-btn tt-btn-primary', onClick: () => actOn(fill(t('prompt.learn'), vars), fill(t('label.learn'), vars)) }, t('action.learn')))
+    actions.push(h('button', { key: 'check', type: 'button', className: 'tt-btn', onClick: () => actOn(fill(t('prompt.check'), vars), fill(t('label.check'), vars)) }, t('action.check')))
   } else {
-    actions.push(h('button', { key: 'review', type: 'button', className: 'tt-btn tt-btn-primary', onClick: () => act(fill(t('prompt.review'), vars), fill(t('label.review'), vars)) }, t('action.review')))
-    if (node.mastery < 3) actions.push(h('button', { key: 'check', type: 'button', className: 'tt-btn', onClick: () => act(fill(t('prompt.check'), vars), fill(t('label.levelUp'), vars)) }, t('action.levelUp')))
+    actions.push(h('button', { key: 'review', type: 'button', className: 'tt-btn tt-btn-primary', onClick: () => actOn(fill(t('prompt.review'), vars), fill(t('label.review'), vars)) }, t('action.review')))
+    if (node.mastery < 3) actions.push(h('button', { key: 'check', type: 'button', className: 'tt-btn', onClick: () => actOn(fill(t('prompt.check'), vars), fill(t('label.levelUp'), vars)) }, t('action.levelUp')))
   }
   // Drag the grip or title: down to close, up to give the card more room.
   const [expanded, setExpanded] = useState(false)
@@ -1144,7 +1146,7 @@ function useCelebrations(t, nodes, camera, coords) {
 }
 
 /** Tree canvas with legend, tools, the selected node's card and toasts. */
-function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, onMerge, fab, camera: cameraOut }) {
+function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, onMerge, fab, camera: cameraOut, shared, overview }) {
   const [selected, setSelected] = useState(null)
   const [hover, setHover] = useState(null)
   const camera = useRef(null)
@@ -1197,7 +1199,8 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
     h(Viewport, {
       t, width, height, fitKey, camera, tools,
       onBlankTap: () => { setSelected(null); setLegendOpen(false) },
-      focus: recommended ? center(recommended) : null,
+      // An overview (the knowledge map) opens showing everything; a single tree opens on its next step.
+      focus: recommended && !overview ? center(recommended) : null,
       overlay: h(React.Fragment, null,
         legend,
         toasts.length ? h('div', { className: 'tt-overlay tt-toasts', role: 'status' }, toasts.map(x => h('div', { key: x.id, className: `tt-toast tt-toast-${x.kind}` }, x.kind === 'lit' ? h(StarIcon) : x.kind === 'unlock' ? h(SparkIcon, { size: 15 }) : null, x.text))) : null,
@@ -1208,7 +1211,7 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
             fab ? h('div', { className: 'tt-overlay tt-fab' }, fab) : null)),
     }, view => h(Graph, {
       t, nodes, goalIds, selected: current ? selected : null, hover, onSelect: pick, onHover: setHover,
-      now, coords, routeSteps, recommended, celebrate, view,
+      now, coords, routeSteps, recommended, celebrate, view, shared,
     })))
 }
 

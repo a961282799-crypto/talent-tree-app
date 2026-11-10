@@ -176,6 +176,14 @@ const enBase = {
   'view.hint': 'Hover for the hook · drag to pan · wheel to zoom · double-click to reset',
 }
 const zhApp = {
+  'map.title': '知识地图',
+  'map.points': '个知识点',
+  'map.lit': '已点亮',
+  'map.goals': '个目标',
+  'map.shared': '个共用',
+  'map.sharedBy': '被 {n} 个目标共用',
+  'map.empty': '还没有知识点。生成第一棵天赋树后，所有目标的知识点都会画在这里，共用的点连在一起。',
+  'map.cardMeta': '{points} 个知识点 · {goals} 个目标 · {shared} 个点被多个目标共用',
   'home.continue': '继续学习',
   'home.next': '下一个：',
   'home.allLit': '全部点亮了 🎉',
@@ -342,6 +350,14 @@ const zhApp = {
 }
 
 const enApp = {
+  'map.title': 'Knowledge map',
+  'map.points': 'points',
+  'map.lit': 'lit',
+  'map.goals': 'goals',
+  'map.shared': 'shared',
+  'map.sharedBy': 'Used by {n} goals',
+  'map.empty': 'No points yet. Once you plan a tree, every goal\'s points are drawn here, with shared points connecting them.',
+  'map.cardMeta': '{points} points · {goals} goals · {shared} shared by several goals',
   'home.continue': 'Continue',
   'home.next': 'Next: ',
   'home.allLit': 'All lit up 🎉',

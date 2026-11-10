@@ -12,6 +12,7 @@ import { Chat } from './screens/Chat.jsx'
 import { Chats } from './screens/Chats.jsx'
 import { Settings } from './screens/Settings.jsx'
 import { Onboarding } from './screens/Onboarding.jsx'
+import { MapScreen } from './screens/MapScreen.jsx'
 
 const TABS = [
   { id: 'trees', icon: TreeIcon, label: 'tab.trees' },
@@ -73,6 +74,7 @@ export function App() {
           <div className="pushed" key={top.key}>
             {top.type === 'tree' && <TreeScreen goals={top.goals} chatId={top.chatId} />}
             {top.type === 'chat' && <Chat chatId={top.chatId} />}
+            {top.type === 'map' && <MapScreen />}
           </div>
         )}
         {onboarding && <Onboarding />}

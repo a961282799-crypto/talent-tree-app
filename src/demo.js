@@ -38,9 +38,20 @@ export function seedDemo() {
   run('techtree_record', { node_id: 'derivative', level: 3, evidence: '自己算出了 $x^2$ 在 $x=3$ 处的导数' }, now - 1 * DAY)
   run('techtree_record', { node_id: 'auxiliary_function', level: 1, weak: true, evidence: '知道思路，但构造时减错了直线' }, now - 1 * DAY)
   const lit = run('techtree_record', { node_id: 'limit', level: 2, evidence: '能解释 $0.999\\ldots=1$：差距可以任意小' }, now - 600_000)
+  // A second goal that reuses 极限 and 导数的定义: they are already lit there too.
+  run('techtree_plan', {
+    goal_id: 'taylor_formula',
+    nodes: [
+      { id: 'limit', name: '极限', type: 'concept', summary: plan.nodes[0].summary, hook: plan.nodes[0].hook, prerequisites: [] },
+      { id: 'derivative', name: '导数的定义', type: 'concept', summary: plan.nodes[2].summary, hook: plan.nodes[2].hook, prerequisites: ['limit'] },
+      { id: 'higher_derivative', name: '高阶导数', type: 'concept', summary: '对导数再求导，看变化的快慢本身变得多快。', hook: '加速度是速度的导数，那"加速度的变化"叫什么？', prerequisites: ['derivative'] },
+      { id: 'polynomial_approx', name: '多项式逼近', type: 'method', summary: '用最简单的多项式去模仿一个复杂函数在某点附近的样子。', hook: '计算器是怎么算出 $\\sin 0.1$ 的？', prerequisites: ['derivative'] },
+      { id: 'taylor_formula', name: '泰勒公式', type: 'theorem', summary: '只要知道一点处各阶导数，就能在附近用多项式近似整个函数。', hook: '$e^x = 1 + x + \\frac{x^2}{2!} + \\cdots$ 为什么能一直写下去？', prerequisites: ['higher_derivative', 'polynomial_approx', 'lagrange_mvt'] },
+    ],
+  }, now - 2 * DAY)
   setKnowledge(ctx.knowledge)
 
-  const chat = createChat({ goals: ctx.goals, title: '拉格朗日中值定理' })
+  const chat = createChat({ goals: ctx.goals.filter(g => g.id === 'lagrange_mvt'), title: '拉格朗日中值定理' })
   const call = (id, name, args) => ({ role: 'assistant', content: '', tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] })
   updateChat(chat.id, c => ({
     ...c,

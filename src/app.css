@@ -425,3 +425,16 @@ h1, h2, p { margin: 0; }
 .onb-dots i.on { width: 20px; background: var(--dsw-alias-brand-primary); }
 .onb-actions { display: flex; flex-direction: column; align-items: stretch; width: 100%; gap: 4px; }
 .onb-next { width: 100%; height: 50px; border-radius: 16px; font-size: 16px; }
+
+/* ---- Knowledge map ---- */
+.tt-shared { position: absolute; bottom: -9px; left: 12px; display: inline-flex; align-items: center; gap: 2px; padding: 0 7px 0 5px; border-radius: 999px; font-size: 10.5px; font-weight: 800; line-height: 18px; color: #5b3a00; background: linear-gradient(135deg, #fff1c2, #f6c94b); border: 1px solid #e5b324; box-shadow: 0 2px 6px -2px rgba(214, 158, 18, .6); }
+.map-summary { flex: none; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; font-size: 12.5px; color: var(--tt-fg2); }
+.map-summary span { display: inline-flex; align-items: baseline; gap: 3px; }
+.map-summary b { font-size: 16px; color: var(--tt-fg); font-variant-numeric: tabular-nums; }
+.map-summary .map-shared b { color: #b7791f; }
+.map-card { display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 10px; padding: 12px 14px; border-radius: 18px; border: 1px dashed color-mix(in srgb, #eeb031 60%, transparent); background: color-mix(in srgb, #eeb031 7%, var(--app-surface)); text-align: left; }
+.map-card:active { transform: scale(.99); }
+.map-card-icon { flex: none; font-size: 26px; }
+.map-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.map-card-body b { font-size: 15.5px; }
+.map-card-body span { font-size: 12.5px; color: var(--dsw-alias-label-tertiary); }
