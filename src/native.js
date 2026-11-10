@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core'
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
 import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { confirmDialog } from './dialog.js'
 
 export const isNative = Capacitor.isNativePlatform()
 export const platform = Capacitor.getPlatform()
@@ -57,7 +58,31 @@ export async function saveFile(blob, name, mime) {
   return 'downloaded'
 }
 
-/** Ask a yes/no question. */
-export function confirmAction(message) {
-  return Promise.resolve(window.confirm(message))
+/** Ask a yes/no question in an in-app dialog. Options: { title, ok, danger }. */
+export function confirmAction(message, options) {
+  return confirmDialog(message, options)
+}
+
+/** Put text on the clipboard. Resolves true on success. */
+export async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    // Older WebViews: copy through a hidden text area.
+    try {
+      const area = document.createElement('textarea')
+      area.value = text
+      area.setAttribute('readonly', '')
+      area.style.position = 'fixed'
+      area.style.opacity = '0'
+      document.body.appendChild(area)
+      area.select()
+      const ok = document.execCommand('copy')
+      area.remove()
+      return ok
+    } catch {
+      return false
+    }
+  }
 }

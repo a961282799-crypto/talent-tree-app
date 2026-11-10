@@ -1,14 +1,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { buildSnapshot } from '../graph.js'
-import { getState, useApp } from '../storage.js'
+import { getState, renameChat, useApp } from '../storage.js'
 import { activeAI } from '../providers.js'
 import { MAX_IMAGES, MAX_PDFS, prepareMessage, readAttachment } from '../attachments.js'
-import { onToolEvent, useNav } from '../nav.js'
-import { send, stop } from '../ai.js'
+import { chatTitle, onToolEvent, useNav } from '../nav.js'
+import { canRegenerate, regenerate, send, stop } from '../ai.js'
+import { copyText } from '../native.js'
+import { promptDialog } from '../dialog.js'
 import { renderMarkdown } from '../markdown.js'
 import { fill, t } from '../i18n.js'
 import { ClockIcon, ProgressRing, StarIcon, TreeIcon, reviewQueue, richToPlain, stats } from '../tree.js'
-import { AlertIcon, BackIcon, ChevronIcon, CloseSmallIcon, FileIcon, PaperclipIcon, SendIcon, StopIcon } from '../icons.jsx'
+import { AlertIcon, BackIcon, ChevronIcon, CloseSmallIcon, CopyIcon, FileIcon, PaperclipIcon, RetryIcon, SendIcon, StopIcon } from '../icons.jsx'
 
 function Markdown({ text }) {
   const html = useMemo(() => renderMarkdown(text), [text])
@@ -17,7 +19,18 @@ function Markdown({ text }) {
 
 const LEVEL = l => t(`level.${l}`)
 
-/** A one-line status for a tool call; plans and light-ups stand out. */
+/** Copy (and, for the latest reply, write again) under an AI message. */
+function MessageActions({ text, onRegenerate }) {
+  const nav = useNav()
+  const copy = async () => nav.toast(t((await copyText(text)) ? 'chat.copied' : 'chat.copyFailed'))
+  return (
+    <div className="msg-actions">
+      <button type="button" className="msg-action" aria-label={t('chat.copy')} title={t('chat.copy')} onClick={copy}><CopyIcon size={16} /></button>
+      {onRegenerate && <button type="button" className="msg-action" aria-label={t('chat.regenerate')} title={t('chat.regenerate')} onClick={onRegenerate}><RetryIcon size={16} /></button>}
+    </div>
+  )
+}
+
 /** "Tree planned" card: the goal, its size, live progress and a way in. */
 function PlanCard({ display, knowledge, onOpenTree }) {
   const nodes = knowledge.nodes[display.goal.id] ? buildSnapshot(knowledge, [display.goal], Date.now()).nodes : []
@@ -169,7 +182,7 @@ export function Chat({ chatId }) {
   const scroller = useRef(null)
   const stick = useRef(true)
 
-  const goals = chat?.goals ?? []
+  const goals = useMemo(() => chat?.goals ?? [], [chat?.goals])
   const nodes = useMemo(() => (goals.length ? buildSnapshot(knowledge, goals, Date.now()).nodes : []), [knowledge, goals])
   const s = stats(nodes)
   const due = reviewQueue(nodes, Date.now()).length
@@ -187,13 +200,28 @@ export function Chat({ chatId }) {
 
   if (!chat) return null
   const doSend = (text, extra) => { stick.current = true; send(chatId, text, onToolEvent, extra) }
-  const title = goals.length ? goals.map(g => richToPlain(g.name)).join(' · ') : chat.title || t('chat.untitled')
+  const title = chatTitle(chat)
+  const rename = async () => {
+    const name = await promptDialog({ title: t('chat.rename'), message: t('chat.rename.hint'), value: chat.customTitle ?? title, placeholder: title })
+    if (name !== null) renameChat(chatId, name)
+  }
+  // Only the latest reply can be written again, and only when it changed nothing in the map.
+  const regenerable = !live && canRegenerate(chat.messages)
+  // The button sits under the reply to the learner's latest message, never under an older one.
+  let lastAi = -1
+  let lastUser = -1
+  chat.messages.forEach((m, i) => {
+    if (m.role === 'assistant' && m.content) lastAi = i
+    if (m.role === 'user') lastUser = i
+  })
+  if (lastAi < lastUser) lastAi = -1
+  const redo = () => { stick.current = true; regenerate(chatId, onToolEvent) }
 
   return (
     <div className="screen screen-chat">
       <header className="topbar">
         <button type="button" className="icon-btn" aria-label={t('common.back')} onClick={nav.back}><BackIcon /></button>
-        <div className="topbar-title">{title}</div>
+        <button type="button" className="topbar-title topbar-title-btn" onClick={rename} aria-label={`${title} · ${t('chat.rename')}`}>{title}</button>
         {nodes.length > 0 && (
           <button type="button" className="tree-chip" onClick={openTree} aria-label={t('chip.open')}>
             <span className="tt-scope"><ProgressRing lit={s.lit} total={s.total} size={22} /></span>
@@ -227,18 +255,26 @@ export function Chat({ chatId }) {
               </div>
             )
           }
-          if (m.role === 'assistant') return m.content ? <div key={i} className="msg msg-ai"><Markdown text={m.content} /></div> : null
+          if (m.role === 'assistant') {
+            if (!m.content) return null
+            return (
+              <div key={i} className="msg msg-ai">
+                <Markdown text={m.content} />
+                {!live && <MessageActions text={m.content} onRegenerate={i === lastAi && regenerable ? redo : null} />}
+              </div>
+            )
+          }
           if (m.role === 'tool') return <div key={i} className="msg msg-tool"><ToolPill display={m.display} onOpenTree={openTree} knowledge={knowledge} /></div>
           if (m.role === 'error') {
             return (
               <div key={i} className="msg msg-error">
                 <AlertIcon size={18} />
                 <div>
-                  <p>{fill(t('chat.error'), { message: m.content })}</p>
+                  <p>{m.content}</p>
+                  {m.detail && <p className="msg-error-detail">{m.detail}</p>}
                   <div className="row">
-                    {m.code === 'no-key'
-                      ? <button type="button" className="btn btn-small btn-primary" onClick={nav.openSettings}>{t('chat.openSettings')}</button>
-                      : <button type="button" className="btn btn-small" onClick={() => doSend(null)}>{t('chat.retry')}</button>}
+                    {['no-key', 'model', 'balance'].includes(m.code) && <button type="button" className="btn btn-small btn-primary" onClick={nav.openSettings}>{t('chat.openSettings')}</button>}
+                    {m.code !== 'no-key' && <button type="button" className="btn btn-small" onClick={() => doSend(null)}>{t('chat.retry')}</button>}
                   </div>
                 </div>
               </div>

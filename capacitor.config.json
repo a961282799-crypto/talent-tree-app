@@ -7,6 +7,7 @@
   "plugins": {
     "CapacitorHttp": { "enabled": true },
     "Keyboard": { "resize": "body", "resizeOnFullScreen": true },
-    "SplashScreen": { "launchShowDuration": 0 }
+    "SplashScreen": { "launchShowDuration": 0 },
+    "LocalNotifications": { "smallIcon": "ic_stat_tree", "iconColor": "#c8834c" }
   }
 }

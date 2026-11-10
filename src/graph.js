@@ -6,8 +6,24 @@
 
 export const NODE_TYPES = ['concept', 'theorem', 'method', 'proof_idea', 'skill']
 export const MAX_LEVEL = 3
-/** Days before a lit node starts fading, by mastery level (bronze, silver, gold). */
+/** Days before a lit node starts fading, by mastery level (bronze, silver, gold), before any successful review. */
 export const REVIEW_DAYS = { 1: 3, 2: 7, 3: 21 }
+/** Each successful review on time doubles the wait, up to this many doublings (gold: 21 → 336 days). */
+export const MAX_REVIEW_DOUBLINGS = 4
+const DAY_MS = 86_400_000
+
+/** Days a lit node can go without review: the level's base interval, doubled for each successful review in a row. */
+export function reviewIntervalDays(node) {
+  const base = REVIEW_DAYS[node.mastery]
+  if (!base) return Infinity
+  return base * 2 ** Math.min(Math.max(node.reviews ?? 0, 0), MAX_REVIEW_DOUBLINGS)
+}
+
+/** When a lit node starts fading (epoch ms), or null when it is not lit or never reviewed. */
+export function nextReviewAt(node) {
+  if (!(node.mastery >= 1) || node.reviewedAt === undefined) return null
+  return node.reviewedAt + reviewIntervalDays(node) * DAY_MS
+}
 
 const ID_RE = /^[a-z0-9][a-z0-9_]{0,63}$/
 /** Longest kept "hook": the one formula, idea or question that makes a point intriguing. */
@@ -206,6 +222,15 @@ export function recordMastery(store, args, now) {
   }
   const history = [...(node.history ?? []), { at: now, level, weak: args.weak === true, evidence: args.evidence.trim().slice(0, 500) }].slice(-20)
   const next = { ...node, mastery: level, weak: args.weak === true, reviewedAt: now, history }
+  // Spaced review: holding the same level after at least half the wait counts as a successful review and
+  // lengthens the next wait; re-checks soon after learning change nothing; a new level, a drop or a gap starts over.
+  const before = node.mastery ?? 0
+  const halfDue = node.reviewedAt !== undefined && now - node.reviewedAt >= (reviewIntervalDays(node) * DAY_MS) / 2
+  const reviews = level >= 1 && level === before && args.weak !== true
+    ? (halfDue ? (node.reviews ?? 0) + 1 : node.reviews ?? 0)
+    : 0
+  if (reviews > 0) next.reviews = reviews
+  else delete next.reviews
   return { ...store, nodes: { ...store.nodes, [node.id]: next } }
 }
 
@@ -223,8 +248,8 @@ export function closure(store, goalIds) {
 
 /** Whether a lit node is overdue for review. */
 export function isFading(node, now) {
-  if (!(node.mastery >= 1) || node.reviewedAt === undefined) return false
-  return now - node.reviewedAt > REVIEW_DAYS[node.mastery] * 86_400_000
+  const due = nextReviewAt(node)
+  return due !== null && now > due
 }
 
 /** 'lit' | 'available' | 'locked' for one node of a snapshot or store. */
@@ -253,6 +278,7 @@ export function buildSnapshot(store, goals, now) {
       mastery: n.mastery ?? 0,
       ...(n.weak ? { weak: true } : {}),
       ...(n.reviewedAt !== undefined ? { reviewedAt: n.reviewedAt } : {}),
+      ...(n.reviews ? { reviews: n.reviews } : {}),
       ...(n.est_minutes !== undefined ? { est_minutes: n.est_minutes } : {}),
       ...(n.history?.length ? { evidence: n.history[n.history.length - 1].evidence } : {}),
     }
@@ -446,6 +472,39 @@ export function mergeNodes(store, fromId, intoId) {
   }
   const next = { ...store, nodes, ...(store.goals ? { goals } : {}) }
   if (store.hidden) next.hidden = [...new Set(store.hidden.map(id => (id === fromId ? intoId : id)))]
+  return next
+}
+
+/**
+ * Add an imported map to the learner's own, without mutating either. Points only
+ * in the import are added; for points in both, the existing structure (name,
+ * prerequisites) stays and the better mastery wins. Goals are combined.
+ * Existing prerequisites never change, so no cycle can appear.
+ */
+export function mergeStores(base, incoming) {
+  const nodes = { ...base.nodes }
+  for (const [id, node] of Object.entries(incoming.nodes ?? {})) {
+    const mine = nodes[id]
+    if (!mine) {
+      nodes[id] = node
+      continue
+    }
+    if ((node.mastery ?? 0) > (mine.mastery ?? 0)) {
+      const { mastery, weak, reviewedAt, reviews, history } = node
+      nodes[id] = { ...mine, mastery, weak, reviewedAt, reviews, history }
+      for (const key of ['weak', 'reviewedAt', 'reviews', 'history']) if (nodes[id][key] === undefined) delete nodes[id][key]
+    }
+  }
+  // A prerequisite of an added point may be missing from both maps: drop it rather than leave a dangling link.
+  for (const [id, node] of Object.entries(nodes)) {
+    if (node.prerequisites.some(p => !(p in nodes))) nodes[id] = { ...node, prerequisites: node.prerequisites.filter(p => p in nodes) }
+  }
+  const goals = { ...(incoming.goals ?? {}), ...(base.goals ?? {}) }
+  const visibleIncoming = new Set(Object.keys(incoming.goals ?? {}).filter(id => !(incoming.hidden ?? []).includes(id)))
+  const hidden = (base.hidden ?? []).filter(id => !visibleIncoming.has(id))
+  const next = { ...base, nodes }
+  if (base.goals || incoming.goals) next.goals = goals
+  if (base.hidden || hidden.length) next.hidden = hidden
   return next
 }
 

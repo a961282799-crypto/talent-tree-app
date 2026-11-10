@@ -1,11 +1,12 @@
 /**
- * Example data for the web preview (built with VITE_DEMO=1): one talent tree
- * with some progress and the conversation that produced it, so the app can be
- * explored without an API key.
+ * Example data: one talent tree with some progress and the conversation that
+ * produced it, so the app can be explored without an API key. The web preview
+ * (built with VITE_DEMO=1) loads it on start; on phones the learner opens it
+ * from the welcome guide or the home page, and can remove it again.
  */
 import { executeTool } from './tutor.js'
 import { emptyStore } from './graph.js'
-import { createChat, getState, setKnowledge, updateChat } from './storage.js'
+import { createChat, deleteChat, getState, setKnowledge, updateChat } from './storage.js'
 
 const DAY = 86_400_000
 
@@ -49,8 +50,6 @@ export function seedDemo() {
       { id: 'taylor_formula', name: '泰勒公式', type: 'theorem', summary: '只要知道一点处各阶导数，就能在附近用多项式近似整个函数。', hook: '$e^x = 1 + x + \\frac{x^2}{2!} + \\cdots$ 为什么能一直写下去？', prerequisites: ['higher_derivative', 'polynomial_approx', 'lagrange_mvt'] },
     ],
   }, now - 2 * DAY)
-  setKnowledge(ctx.knowledge)
-
   const chat = createChat({ goals: ctx.goals.filter(g => g.id === 'lagrange_mvt'), title: '拉格朗日中值定理' })
   const call = (id, name, args) => ({ role: 'assistant', content: '', tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] })
   updateChat(chat.id, c => ({
@@ -66,4 +65,34 @@ export function seedDemo() {
       { role: 'assistant', content: '完全正确 🎉 你抓住了极限的核心：**差距可以任意小**。极限点亮为银色！\n\n你的「连续性」已经 5 天没复习了，有空记得点一下"今日复习"。下一个推荐学 **费马引理**——山顶为什么是平的？' },
     ],
   }))
+  // Remember what the example added, so it can be removed without touching the learner's own points.
+  setKnowledge({ ...ctx.knowledge, demo: { ids: Object.keys(ctx.knowledge.nodes), goals: Object.keys(ctx.knowledge.goals ?? {}), chatId: chat.id } })
+}
+
+/** Whether the example is in the map. */
+export const hasDemo = knowledge => Boolean(knowledge?.demo)
+
+/**
+ * Take the example out: its conversation, its goals, and its points unless one
+ * of the learner's own points builds on them (a real tree may reuse 极限).
+ */
+export function removeDemo() {
+  const k = getState().knowledge
+  if (!k.demo) return
+  const demoIds = new Set(k.demo.ids)
+  const needed = new Set(Object.values(k.nodes).filter(n => !demoIds.has(n.id)).flatMap(n => n.prerequisites))
+  // Keep a demo point the learner's points need, and everything it needs in turn.
+  const keep = new Set()
+  const walk = id => {
+    if (keep.has(id) || !k.nodes[id]) return
+    keep.add(id)
+    k.nodes[id].prerequisites.forEach(walk)
+  }
+  needed.forEach(id => { if (demoIds.has(id)) walk(id) })
+  const nodes = Object.fromEntries(Object.entries(k.nodes).filter(([id]) => !demoIds.has(id) || keep.has(id)))
+  const goals = { ...(k.goals ?? {}) }
+  for (const id of k.demo.goals) if (!keep.has(id)) delete goals[id]
+  const { demo, ...rest } = k
+  setKnowledge({ ...rest, nodes, goals, hidden: (k.hidden ?? []).filter(id => id in nodes) })
+  if (getState().chats[demo.chatId]) deleteChat(demo.chatId)
 }

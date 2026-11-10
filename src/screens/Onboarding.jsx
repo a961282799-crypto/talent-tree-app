@@ -3,6 +3,7 @@ import { updateProvider, updateSettings, useApp } from '../storage.js'
 import { PROVIDERS, providerById, providerName } from '../providers.js'
 import { fill, lang, t } from '../i18n.js'
 import { TreeIcon } from '../tree.js'
+import { seedDemo } from '../demo.js'
 
 /** Page 1: a little tree (basics on top, goal at the bottom, as in the app) lighting up point by point. */
 function LightingTree() {
@@ -89,6 +90,7 @@ export function Onboarding() {
           : (
             <div className="onb-actions">
               <button type="button" className="btn btn-primary onb-next" onClick={finish} disabled={!key}>{t('onb.start')}</button>
+              <button type="button" className="onb-later" onClick={() => { seedDemo(); finish() }}>{t('onb.demo')}</button>
               <button type="button" className="onb-later" onClick={finish}>{t('onb.later')}</button>
             </div>
           )}

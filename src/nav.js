@@ -8,7 +8,7 @@ import { send } from './ai.js'
 import { buzz } from './native.js'
 import { chatForGoal, createChat, getState } from './storage.js'
 import { fill, t } from './i18n.js'
-import { reviewPrompt } from './tree.js'
+import { reviewPrompt, richToPlain } from './tree.js'
 
 export const NavContext = createContext(null)
 export const useNav = () => useContext(NavContext)
@@ -17,6 +17,14 @@ export const useNav = () => useContext(NavContext)
 export function libraryOf(knowledge, now = Date.now()) {
   const hidden = new Set(knowledge.hidden ?? [])
   return buildLibrary(knowledge, now).goals.filter(e => !hidden.has(e.goal.id))
+}
+
+/** A conversation's name: the one the learner gave it, else its goals, else its first message. */
+export function chatTitle(chat) {
+  if (!chat) return ''
+  if (chat.customTitle) return chat.customTitle
+  if (chat.goals?.length) return chat.goals.map(g => richToPlain(g.name)).join(' · ')
+  return chat.title || t('chat.untitled')
 }
 
 /** Vibrate when a tool call lights a node. */

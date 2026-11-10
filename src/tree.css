@@ -77,19 +77,19 @@ html.tt-grabbing,html.tt-grabbing *{-webkit-user-select:none!important;user-sele
 .tt-overlay{position:absolute;display:flex;gap:6px;align-items:center;pointer-events:none}
 .tt-overlay>*{pointer-events:auto}
 .tt-legend{left:10px;top:10px;flex-wrap:wrap}
-.tt-pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font-size:11px;color:var(--tt-fg2);background:color-mix(in srgb,var(--tt-bg) 88%,transparent);border:1px solid var(--tt-line-soft);backdrop-filter:blur(6px)}
+.tt-pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font-size:12px;color:var(--tt-fg2);background:color-mix(in srgb,var(--tt-bg) 88%,transparent);border:1px solid var(--tt-line-soft);backdrop-filter:blur(6px)}
 .tt-pill i{width:8px;height:8px;border-radius:50%;display:inline-block}
 .tt-zoom{right:10px;top:10px;gap:0;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--tt-bg) 90%,transparent);border:1px solid var(--tt-line-soft);box-shadow:0 4px 14px -8px rgba(0,0,0,.3);backdrop-filter:blur(6px)}
 .tt-zoom .tt-icon-btn{width:28px;height:28px}
-.tt-zoom-val{min-width:44px;text-align:center;font-size:11px;color:var(--tt-fg2);font-variant-numeric:tabular-nums}
-.tt-hint{left:50%;bottom:10px;transform:translateX(-50%);font-size:11px;color:var(--tt-fg3);white-space:nowrap}
+.tt-zoom-val{min-width:44px;text-align:center;font-size:12px;color:var(--tt-fg2);font-variant-numeric:tabular-nums}
+.tt-hint{left:50%;bottom:10px;transform:translateX(-50%);font-size:12px;color:var(--tt-fg3);white-space:nowrap}
 .tt-card{position:absolute;left:10px;right:10px;bottom:10px;max-width:440px;margin:0 auto;padding:14px 14px 12px;border-radius:16px;border:1px solid var(--tt-line-soft);background:color-mix(in srgb,var(--tt-bg) 94%,transparent);backdrop-filter:blur(12px);box-shadow:0 18px 40px -18px rgba(0,0,0,.45);animation:tt-rise .18s ease-out;cursor:auto}
 @keyframes tt-rise{from{opacity:0;transform:translateY(8px)}}
 .tt-card-head{display:flex;align-items:center;gap:10px}
 .tt-card-head .tt-badge{width:30px;height:30px}
 .tt-card-title{flex:1;min-width:0;font-size:15px;font-weight:700}
 .tt-tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 6px}
-.tt-tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--tt-bg2);color:var(--tt-fg2)}
+.tt-tag{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--tt-bg2);color:var(--tt-fg2)}
 .tt-tag-warn{background:color-mix(in srgb,var(--tt-warn) 16%,var(--tt-bg));color:color-mix(in srgb,var(--tt-warn) 70%,var(--tt-fg))}
 .tt-tag-medal{color:#fff;background:var(--tt-m)}
 .tt-card p{margin:6px 0 8px;color:var(--tt-fg2)}
@@ -118,10 +118,10 @@ html.tt-grabbing,html.tt-grabbing *{-webkit-user-select:none!important;user-sele
 .tt-lib-item:hover{background:var(--tt-hover)}
 .tt-lib-item[aria-current="true"]{border-color:color-mix(in srgb,var(--tt-brand) 35%,transparent);background:color-mix(in srgb,var(--tt-brand) 8%,var(--tt-bg))}
 .tt-lib-name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tt-lib-row{display:flex;justify-content:space-between;font-size:11px;color:var(--tt-fg3)}
+.tt-lib-row{display:flex;justify-content:space-between;font-size:12px;color:var(--tt-fg3)}
 .tt-bar{height:5px;border-radius:3px;background:var(--tt-bg2);overflow:hidden}
 .tt-bar>i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--tt-bronze),var(--tt-gold))}
-.tt-note{font-size:11px;color:var(--tt-fg3)}
+.tt-note{font-size:12px;color:var(--tt-fg3)}
 .tt-main{display:flex;flex-direction:column;gap:12px;padding:18px 20px 20px;min-width:0;overflow:hidden}
 @media (max-width:760px){.tt-page{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.tt-aside{border-right:none;border-bottom:1px solid var(--tt-line-soft);max-height:42%}}
 .tt-step{position:absolute;left:-9px;top:-9px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;background:var(--tt-brand);border:2px solid var(--tt-bg);box-shadow:0 2px 6px -1px color-mix(in srgb,var(--tt-brand) 60%,transparent);z-index:2}

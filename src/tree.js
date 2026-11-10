@@ -7,9 +7,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import katex from 'katex'
 import { buzz, saveFile } from './native.js'
+import { NODE_TYPES, isFading as fading, nextReviewAt, nodeState as stateOf } from './graph.js'
 
 const h = React.createElement
-const REVIEW_DAYS = { 1: 3, 2: 7, 3: 21 }
 export const NODE_W = 168
 export const NODE_H = 60
 const GAP_X = 22
@@ -55,7 +55,6 @@ const MinusIcon = () => svg(15, [h('path', { key: 'p', d: 'M5 12h14' })])
 const FitIcon = () => svg(15, [h('path', { key: 'p', d: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5' })])
 const CloseIcon = () => svg(15, [h('path', { key: 'p', d: 'M6 6l12 12M18 6 6 18' })])
 const TargetIcon = () => svg(15, [h('circle', { key: 'a', cx: 12, cy: 12, r: 7 }), h('circle', { key: 'b', cx: 12, cy: 12, r: 2.5, fill: 'currentColor' }), h('path', { key: 'c', d: 'M12 2v3M12 19v3M2 12h3M19 12h3' })])
-const DownloadIcon = () => svg(15, [h('path', { key: 'p', d: 'M12 4v11M7 10l5 5 5-5M5 20h14' })])
 const BoltIcon = () => svg(14, [h('path', { key: 'p', d: 'M13 2 4 14h7l-1 8 9-12h-7z', fill: 'currentColor', stroke: 'none' })])
 const ClockIcon = () => svg(14, [h('circle', { key: 'c', cx: 12, cy: 12, r: 8.5 }), h('path', { key: 'p', d: 'M12 7.5V12l3 2' })])
 const RefreshIcon = () => svg(15, [h('path', { key: 'p', d: 'M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4' })])
@@ -239,16 +238,6 @@ function richToPlain(text) {
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
-function stateOf(node, byId) {
-  if (node.mastery >= 1) return 'lit'
-  return node.prerequisites.every(p => byId[p] && byId[p].mastery >= 1) ? 'available' : 'locked'
-}
-
-function fading(node, now) {
-  if (!(node.mastery >= 1) || node.reviewedAt === undefined) return false
-  return now - node.reviewedAt > REVIEW_DAYS[node.mastery] * 86400000
-}
-
 /** Layered layout: foundations on top, goals at the bottom. */
 function layout(nodes) {
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
@@ -393,8 +382,6 @@ function recommend(nodes, goalIds) {
   const due = nodes.find(n => fading(n, now))
   return due ? due.id : null
 }
-
-const NODE_TYPES = ['concept', 'theorem', 'method', 'proof_idea', 'skill']
 
 /** Today's review queue: points that need shoring up first, then lit points whose review is due (oldest first). */
 function reviewQueue(nodes, now) {
@@ -776,7 +763,7 @@ function Viewport({ t, width, height, fitKey, focus, camera, children, overlay, 
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [zoomAt])
+  }, [zoomAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Touch: one finger pans, two fingers pinch-zoom around their midpoint.
   const pointers = useRef(new Map())
@@ -1035,6 +1022,8 @@ function Detail({ t, node, nodes, onJump, onClose, act, now, routeIds, alsoIn, o
   if (node.weak) tags.push(h('span', { key: 'weak', className: 'tt-tag tt-tag-warn' }, t('flag.weak')))
   if (fading(node, now)) tags.push(h('span', { key: 'fade', className: 'tt-tag tt-tag-warn' }, t('flag.fading')))
   if (node.est_minutes) tags.push(h('span', { key: 'min', className: 'tt-tag' }, fill(t('detail.minutes'), { n: node.est_minutes })))
+  const dueAt = nextReviewAt(node)
+  if (dueAt !== null && !fading(node, now)) tags.push(h('span', { key: 'next', className: 'tt-tag' }, fill(t('detail.nextReview'), { n: Math.max(1, Math.ceil((dueAt - now) / 86400000)) })))
   const chip = n => h('button', { key: n.id, type: 'button', className: 'tt-link', onClick: () => onJump(n.id) }, h(Rich, { text: n.name }))
   const links = (label, list) => h('div', { className: 'tt-links' },
     h('span', null, `${label}：`),
@@ -1136,7 +1125,7 @@ function useCelebrations(t, nodes, camera, coords) {
     const timer = setTimeout(() => setCelebrate(c => (c && c.key === key ? null : c)), 2400)
     const toastTimer = setTimeout(() => setToasts(list => list.filter(x => !x.id.startsWith(`${key}:`))), 4200)
     return () => { clearTimeout(timer); clearTimeout(toastTimer) }
-  }, [nodes])
+  }, [nodes]) // eslint-disable-line react-hooks/exhaustive-deps
   const notify = useCallback(text => {
     const id = `n${Date.now()}`
     setToasts(list => list.concat([{ id, text, kind: 'info' }]).slice(-4))
@@ -1159,7 +1148,7 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
   const current = selected && byId[selected] ? byId[selected] : null
   const routeIds = useMemo(() => (current && current.mastery < 1 ? learningRoute(nodes, current.id) : []), [nodes, current])
   const routeSteps = routeIds.length > 1 ? Object.fromEntries(routeIds.map((id, i) => [id, i])) : null
-  const { celebrate, toasts, notify } = useCelebrations(t, nodes, camera, coords)
+  const { celebrate, toasts } = useCelebrations(t, nodes, camera, coords)
   const center = id => ({ x: coords[id].x + NODE_W / 2, y: coords[id].y + NODE_H / 2 })
   // Once the card for a newly selected node is laid out, keep the node visible above it.
   const revealSelected = useRef(null)
@@ -1170,7 +1159,7 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
     const card = stageRef.current && stageRef.current.querySelector('.tt-card')
     const c = center(id)
     camera.current.reveal(c.x, c.y, card ? card.offsetHeight + 12 : 0)
-  }, [selected])
+  }, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
   const jump = id => { revealSelected.current = id; setSelected(id) }
   const pick = id => { if (id) revealSelected.current = id; setSelected(id) }
   const locate = () => {
@@ -1178,12 +1167,8 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
     const c = center(recommended)
     if (camera.current) camera.current.flyTo(c.x, c.y, { k: 1 })
   }
-  const doExport = () => {
-    exportPng(t, title, nodes, goalIds).then(
-      how => { if (how !== 'cancelled') notify(t(how === 'copied' ? 'toast.copied' : 'toast.exported')) },
-      () => notify(t('toast.exportFailed')))
-  }
-  if (cameraOut) cameraOut.current = { fit: () => camera.current && camera.current.fit(), locate }
+  // Screens drive the canvas through this handle: fit everything, fly to the next step, or open one point.
+  if (cameraOut) cameraOut.current = { fit: () => camera.current && camera.current.fit(), locate, select: id => { if (byId[id]) jump(id) } }
   const legend = !legendOpen
     ? h('button', { type: 'button', className: 'tt-overlay tt-legend-toggle', 'aria-expanded': false, onClick: () => setLegendOpen(true) }, h('i', null, 'i'), t('legend.title'))
     : h('div', { className: 'tt-overlay tt-legend tt-legend-open', role: 'button', tabIndex: 0, 'aria-expanded': true, onClick: () => setLegendOpen(false) },

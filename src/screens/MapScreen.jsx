@@ -3,8 +3,8 @@ import { buildSnapshot } from '../graph.js'
 import { useApp } from '../storage.js'
 import { libraryOf, useNav } from '../nav.js'
 import { fill, t } from '../i18n.js'
-import { Empty, Stage, exportPng, stats } from '../tree.js'
-import { BackIcon, MoreIcon } from '../icons.jsx'
+import { Empty, Rich, Stage, exportPng, richToPlain, stats } from '../tree.js'
+import { BackIcon, CloseSmallIcon, MoreIcon, SearchIcon } from '../icons.jsx'
 import { MergeSheet } from './MergeSheet.jsx'
 
 /**
@@ -16,11 +16,20 @@ export function MapScreen() {
   const knowledge = useApp(s => s.knowledge)
   const [merging, setMerging] = useState(null)
   const [menu, setMenu] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [query, setQuery] = useState('')
   const camera = useRef(null)
   const entries = useMemo(() => libraryOf(knowledge), [knowledge])
-  const goals = entries.map(e => e.goal)
-  const goalIds = useMemo(() => new Set(goals.map(g => g.id)), [goals.map(g => g.id).join(',')])
-  const nodes = useMemo(() => buildSnapshot(knowledge, goals, Date.now()).nodes, [knowledge, goalIds])
+  const goals = useMemo(() => entries.map(e => e.goal), [entries])
+  const goalIds = useMemo(() => new Set(goals.map(g => g.id)), [goals])
+  const nodes = useMemo(() => buildSnapshot(knowledge, goals, Date.now()).nodes, [knowledge, goals])
+  const q = query.trim().toLowerCase()
+  // Search names, earlier names (aliases) and ids.
+  const matches = useMemo(() => (q
+    ? nodes.filter(n => [n.name, n.id, ...(knowledge.nodes[n.id]?.aliases ?? [])].some(x => richToPlain(x).toLowerCase().includes(q))).slice(0, 30)
+    : []), [nodes, knowledge, q])
+  const closeSearch = () => { setSearching(false); setQuery('') }
+  const show = id => { closeSearch(); camera.current?.select(id) }
   // How many goals use each point.
   const shared = useMemo(() => {
     const count = {}
@@ -48,8 +57,31 @@ export function MapScreen() {
       <header className="topbar">
         <button type="button" className="icon-btn" aria-label={t('common.back')} onClick={nav.back}><BackIcon /></button>
         <div className="topbar-title">{t('map.title')}</div>
+        {nodes.length > 0 && <button type="button" className="icon-btn" aria-label={t('map.search')} onClick={() => setSearching(v => !v)}><SearchIcon /></button>}
         {nodes.length > 0 && <button type="button" className="icon-btn" aria-label={t('tree.menu')} onClick={() => setMenu(v => !v)}><MoreIcon /></button>}
       </header>
+      {searching && (
+        <div className="map-search">
+          <div className="map-search-row">
+            <label className="search-box">
+              <SearchIcon size={18} />
+              <input type="search" autoFocus value={query} placeholder={t('map.searchPlaceholder')} aria-label={t('map.search')} onChange={e => setQuery(e.target.value)} />
+            </label>
+            <button type="button" className="icon-btn" data-back aria-label={t('common.close')} onClick={closeSearch}><CloseSmallIcon size={18} /></button>
+          </div>
+          {q && (
+            <div className="map-results" role="listbox" aria-label={t('map.search')}>
+              {matches.length === 0 && <p className="muted small pad">{fill(t('search.none'), { q: query.trim() })}</p>}
+              {matches.map(n => (
+                <button key={n.id} type="button" role="option" aria-selected="false" className="sheet-item" onClick={() => show(n.id)}>
+                  <span className="sheet-item-name"><Rich text={n.name} /></span>
+                  {n.mastery >= 1 && <span className={`medal-dot m-${n.mastery}`}>{t(`medal.${n.mastery}`)}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {menu && (
         <div className="menu-backdrop" onClick={() => setMenu(false)}>
           <div className="menu" role="menu" onClick={e => e.stopPropagation()}>

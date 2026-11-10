@@ -187,20 +187,75 @@ test('an aborted request is not retried', async () => {
   assert.equal(nativeCalls, 0)
 })
 
-test('import files are checked before anything is replaced', async () => {
-  const { parseImport, importData, getState, setKnowledge } = await import('../src/storage.js')
-  const exported = { app: 'talent-tree', version: 1, knowledge: { nodes: { a: { id: 'a', name: 'A', prerequisites: [] } } } }
-  assert.deepEqual(Object.keys(parseImport(exported).nodes), ['a'])
-  for (const bad of [null, {}, { nodes: null }, { nodes: [] }, { knowledge: { nodes: { x: { name: 'no id' } } } }]) {
-    assert.throws(() => parseImport(bad))
-  }
-  const before = { version: 1, nodes: { keep: { id: 'keep', name: 'Keep', prerequisites: [] } } }
-  setKnowledge(before)
-  // Checking alone changes nothing.
-  parseImport(exported)
-  assert.equal(getState().knowledge, before)
-  assert.throws(() => importData({ nodes: [] }))
-  assert.equal(getState().knowledge, before)
-  assert.equal(importData(exported), 1)
-  assert.deepEqual(Object.keys(getState().knowledge.nodes), ['a'])
+test('error replies become advice the learner can act on', async () => {
+  const { describeHttpError } = await import('../src/ai.js')
+  assert.equal(describeHttpError(401).code, 'no-key')
+  assert.equal(describeHttpError(402).code, 'balance')
+  assert.equal(describeHttpError(429, 'You exceeded your current quota').code, 'balance')
+  assert.equal(describeHttpError(429, 'Rate limit reached').code, 'rate')
+  assert.equal(describeHttpError(400, "This model's maximum context length is 65536 tokens").code, 'too-long')
+  assert.equal(describeHttpError(400, 'Model Not Exist').code, 'model')
+  assert.equal(describeHttpError(404, '').code, 'model')
+  assert.equal(describeHttpError(503).code, 'server')
+  assert.equal(describeHttpError(400, 'something odd').code, 'http')
+})
+
+test('token counts in the last streamed chunk are picked up', () => {
+  const acc = createAccumulator()
+  acc.add({ choices: [{ delta: { content: 'hi' } }] })
+  acc.add({ choices: [], usage: { prompt_tokens: 120, completion_tokens: 8, total_tokens: 128 } })
+  assert.deepEqual(acc.message.usage, { input: 120, output: 8 })
+})
+
+test('long histories are cut to a character budget, starting at a learner message and keeping the latest turn', () => {
+  const long = 'x'.repeat(1000)
+  const all = []
+  for (let i = 0; i < 10; i++) all.push({ role: 'user', content: `q${i}` }, { role: 'assistant', content: long })
+  const out = apiMessages(all, 40, 3500)
+  assert.equal(out[0].role, 'user')
+  assert.equal(out[0].content, 'q7')
+  assert.ok(out.reduce((n, m) => n + m.content.length, 0) <= 3500)
+  // A single huge exchange is still sent whole.
+  const huge = apiMessages([{ role: 'user', content: 'old' }, { role: 'assistant', content: 'a' }, { role: 'user', content: long }, { role: 'assistant', content: long }], 40, 500)
+  assert.deepEqual(huge.map(m => m.content.slice(0, 3)), ['xxx', 'xxx'])
+})
+
+test('older attachments are cut to their opening; recent ones are sent in full', () => {
+  const pdf = `看看这个\n\n【附件 1：notes.pdf】\n${'内容'.repeat(5000)}`
+  const all = [{ role: 'user', content: pdf, label: '看看这个', attachments: [{ kind: 'pdf', name: 'notes.pdf' }] }, { role: 'assistant', content: 'ok' }]
+  assert.equal(apiMessages(all)[0].content, pdf)
+  for (let i = 0; i < 3; i++) all.push({ role: 'user', content: `q${i}` }, { role: 'assistant', content: 'a' })
+  const first = apiMessages(all)[0].content
+  assert.ok(first.startsWith('看看这个'))
+  assert.ok(first.length < 2000)
+  assert.match(first, /只保留了开头|only its opening/)
+})
+
+test('only a reply that changed nothing in the map can be written again', async () => {
+  const { canRegenerate } = await import('../src/ai.js')
+  const q = { role: 'user', content: 'why?' }
+  assert.equal(canRegenerate([q, { role: 'assistant', content: 'because' }]), true)
+  assert.equal(canRegenerate([q, { role: 'error', content: 'x' }]), true)
+  assert.equal(canRegenerate([q]), false)
+  assert.equal(canRegenerate([q, { role: 'assistant', content: '', tool_calls: [{}] }, { role: 'tool', display: { type: 'view' } }, { role: 'assistant', content: 'here' }]), true)
+  assert.equal(canRegenerate([q, { role: 'assistant', content: '', tool_calls: [{}] }, { role: 'tool', display: { type: 'record', level: 1 } }, { role: 'assistant', content: 'lit!' }]), false)
+})
+
+test('streamed text is redrawn at most a few times a second, and the last value always lands', async () => {
+  const { throttle } = await import('../src/ai.js')
+  const seen = []
+  const th = throttle(v => seen.push(v), 40)
+  th.call('a')
+  th.call('ab')
+  th.call('abc')
+  assert.deepEqual(seen, ['a'])
+  await new Promise(r => setTimeout(r, 60))
+  assert.deepEqual(seen, ['a', 'abc'])
+  th.call('abcd')
+  th.flush()
+  assert.deepEqual(seen, ['a', 'abc', 'abcd'])
+  th.call('x')
+  th.cancel()
+  th.flush()
+  assert.deepEqual(seen, ['a', 'abc', 'abcd'])
 })

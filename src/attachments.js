@@ -81,8 +81,7 @@ async function readPdf(file) {
   }
   const meaningful = text.replace(/— [^—]+ —/g, '').replace(/\s+/g, '').length
   const scanned = meaningful < SCANNED_CHARS_PER_PAGE * Math.min(readPages, pages)
-  let scans = []
-  let thumb = null
+  const scans = []
   const first = await doc.getPage(1)
   const v = first.getViewport({ scale: 1 })
   const renderPage = async (page, width) => {
@@ -94,7 +93,7 @@ async function readPdf(file) {
     return canvas
   }
   const thumbCanvas = await renderPage(first, 220)
-  thumb = scaled(thumbCanvas, thumbCanvas.width, thumbCanvas.height, THUMB_SIDE, 0.75)
+  const thumb = scaled(thumbCanvas, thumbCanvas.width, thumbCanvas.height, THUMB_SIDE, 0.75)
   if (scanned) {
     for (let i = 1; i <= Math.min(pages, SCAN_PAGES); i++) {
       const canvas = await renderPage(await doc.getPage(i), 1400)

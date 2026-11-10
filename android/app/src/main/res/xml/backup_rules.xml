@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older. The encrypted API keys are left out: their decryption key lives in the
+     Android Keystore, which is never backed up, so a restored copy could not be read anyway. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="WSSecureStorageSharedPreferences.xml" />
+</full-backup-content>

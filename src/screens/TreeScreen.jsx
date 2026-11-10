@@ -48,7 +48,7 @@ export function TreeScreen({ goals: initialGoals, chatId }) {
   const snapshot = useMemo(() => buildSnapshot(knowledge, shown, Date.now()), [knowledge, shown])
   const nodes = snapshot.nodes
   const goalKey = shown.map(g => g.id).join(',')
-  const goalIds = useMemo(() => new Set(shown.map(g => g.id)), [goalKey])
+  const goalIds = useMemo(() => new Set(shown.map(g => g.id)), [goalKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const title = snapshot.goals.map(g => richToPlain(g.name)).join(' · ')
   const hidden = new Set(knowledge.hidden ?? [])
   const alsoInOf = id => goalsContaining(knowledge, id).filter(g => !goalIds.has(g.id) && !hidden.has(g.id))
@@ -62,7 +62,7 @@ export function TreeScreen({ goals: initialGoals, chatId }) {
   }
   const remove = async () => {
     setMenu(false)
-    if (!(await confirmAction(fill(t('tree.deleteConfirm'), { name: title })))) return
+    if (!(await confirmAction(fill(t('tree.deleteConfirm'), { name: title }), { ok: t('common.delete'), danger: true }))) return
     shown.forEach(g => forgetGoal(g.id))
     nav.back()
   }

@@ -7,6 +7,7 @@ import { loadState } from './storage.js'
 import { isNative } from './native.js'
 import { lang } from './i18n.js'
 import { App } from './App.jsx'
+import { ErrorBoundary } from './screens/ErrorBoundary.jsx'
 
 document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'
 if (import.meta.env.VITE_DEMO) document.documentElement.classList.add('preview')
@@ -23,5 +24,5 @@ loadState().then(async () => {
 }).finally(() => {
   syncStatusBar()
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', syncStatusBar)
-  createRoot(document.getElementById('root')).render(<App />)
+  createRoot(document.getElementById('root')).render(<ErrorBoundary><App /></ErrorBoundary>)
 })

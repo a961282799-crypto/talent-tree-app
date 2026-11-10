@@ -7,6 +7,8 @@ import { fill, t } from '../i18n.js'
 import { ClockIcon, ProgressRing, Rich, SparkIcon, TreeIcon, TreeThumb, recommend, reviewQueue, richToPlain, stats } from '../tree.js'
 import { ChevronIcon, KeyIcon } from '../icons.jsx'
 import { MapCard } from './MapScreen.jsx'
+import { hasDemo, removeDemo, seedDemo } from '../demo.js'
+import { confirmAction } from '../native.js'
 
 const MEDAL = ['', '#c8834c', '#93a4bd', '#eeb031']
 /** Points one review session covers; the rest wait for the next one. */
@@ -84,11 +86,15 @@ export function Home() {
   const chats = useApp(s => s.chats)
   const hasKey = useApp(s => Boolean(activeAI(s.settings).apiKey))
   const now = Date.now()
-  const entries = useMemo(() => libraryOf(knowledge, now), [knowledge])
+  const entries = useMemo(() => libraryOf(knowledge, Date.now()), [knowledge])
   const lastChat = useMemo(() => Object.values(chats)
     .filter(c => c.goals.length && c.goals.some(g => knowledge.nodes[g.id]))
     .sort((a, b) => b.updatedAt - a.updatedAt)[0], [chats, knowledge])
-  const due = useMemo(() => reviewQueue(Object.values(knowledge.nodes).map(n => ({ ...n, mastery: n.mastery ?? 0 })), now), [knowledge])
+  const due = useMemo(() => reviewQueue(Object.values(knowledge.nodes).map(n => ({ ...n, mastery: n.mastery ?? 0 })), Date.now()), [knowledge])
+  const demo = hasDemo(knowledge)
+  const dropDemo = async () => {
+    if (await confirmAction(t('demo.removeConfirm'), { ok: t('demo.remove') })) removeDemo()
+  }
   const examples = [t('home.example.1'), t('home.example.2'), t('home.example.3')]
   return (
     <div className="screen">
@@ -107,9 +113,18 @@ export function Home() {
               {examples.map(x => <button key={x} type="button" className="chip" onClick={() => nav.startGoal(x)}>{x}</button>)}
             </div>
           )}
+          {entries.length === 0 && !hasKey && (
+            <button type="button" className="link small demo-link" onClick={seedDemo}>{t('demo.open')} ›</button>
+          )}
         </section>
 
         {import.meta.env.VITE_DEMO && <p className="banner banner-info">{t('home.preview')}</p>}
+        {demo && !import.meta.env.VITE_DEMO && (
+          <div className="banner banner-info demo-banner">
+            <span>{t('demo.banner')}</span>
+            <button type="button" className="btn btn-small" onClick={dropDemo}>{t('demo.remove')}</button>
+          </div>
+        )}
         {!hasKey && !import.meta.env.VITE_DEMO && (
           <button type="button" className="banner" onClick={nav.openSettings}>
             <KeyIcon size={20} />

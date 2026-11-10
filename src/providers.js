@@ -8,6 +8,8 @@
 export const PROVIDERS = [
   {
     id: 'deepseek',
+    /** Accepts stream_options.include_usage, so replies report their token counts. */
+    usage: true,
     name: 'DeepSeek',
     baseUrl: 'https://api.deepseek.com',
     models: ['deepseek-flash', 'deepseek-v4-pro'],
@@ -16,6 +18,7 @@ export const PROVIDERS = [
   },
   {
     id: 'qwen',
+    usage: true,
     name: { zh: '通义千问（阿里云百炼）', en: 'Qwen (Alibaba Cloud Model Studio)' },
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     models: ['qwen-plus', 'qwen-max', 'qwen3.8-max'],
@@ -56,6 +59,7 @@ export const PROVIDERS = [
   },
   {
     id: 'openai',
+    usage: true,
     name: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
     models: ['gpt-5.5', 'gpt-5.4-mini'],
