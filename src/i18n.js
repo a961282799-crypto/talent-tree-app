@@ -176,6 +176,10 @@ const enBase = {
   'view.hint': 'Hover for the hook · drag to pan · wheel to zoom · double-click to reset',
 }
 const zhApp = {
+  'chat.plan.title': '天赋树「{name}」生成好了',
+  'chat.plan.meta': '{total} 个知识点',
+  'chat.plan.known': '其中 {n} 个你已经学会',
+  'chat.plan.open': '查看',
   'legend.title': '图例',
   'tree.menu': '更多',
   'tree.export': '导出图片',
@@ -294,6 +298,10 @@ const zhApp = {
 }
 
 const enApp = {
+  'chat.plan.title': 'Talent tree for "{name}" is ready',
+  'chat.plan.meta': '{total} points',
+  'chat.plan.known': '{n} already learned',
+  'chat.plan.open': 'Open',
   'legend.title': 'Legend',
   'tree.menu': 'More',
   'tree.export': 'Export image',

@@ -5,8 +5,8 @@ import { onToolEvent, useNav } from '../nav.js'
 import { send, stop } from '../ai.js'
 import { renderMarkdown } from '../markdown.js'
 import { fill, t } from '../i18n.js'
-import { ProgressRing, StarIcon, TreeIcon, reviewQueue, richToPlain, stats } from '../tree.js'
-import { AlertIcon, BackIcon, SendIcon, StopIcon } from '../icons.jsx'
+import { ClockIcon, ProgressRing, StarIcon, TreeIcon, reviewQueue, richToPlain, stats } from '../tree.js'
+import { AlertIcon, BackIcon, ChevronIcon, SendIcon, StopIcon } from '../icons.jsx'
 
 function Markdown({ text }) {
   const html = useMemo(() => renderMarkdown(text), [text])
@@ -16,16 +16,30 @@ function Markdown({ text }) {
 const LEVEL = l => t(`level.${l}`)
 
 /** A one-line status for a tool call; plans and light-ups stand out. */
-function ToolPill({ display, onOpenTree }) {
+/** "Tree planned" card: the goal, its size, live progress and a way in. */
+function PlanCard({ display, knowledge, onOpenTree }) {
+  const nodes = knowledge.nodes[display.goal.id] ? buildSnapshot(knowledge, [display.goal], Date.now()).nodes : []
+  const s = stats(nodes)
+  const total = nodes.length || display.total || display.added + display.merged
+  return (
+    <button type="button" className="plan-card" onClick={onOpenTree}>
+      <span className="plan-card-icon"><TreeIcon size={22} /></span>
+      <span className="plan-card-body">
+        <b>{fill(t('chat.plan.title'), { name: richToPlain(display.goal.name) })}</b>
+        <span className="plan-card-meta">
+          {fill(t('chat.plan.meta'), { total })}
+          {s.lit > 0 && <em>{fill(t('chat.plan.known'), { n: s.lit })}</em>}
+        </span>
+        <span className="bar"><i style={{ width: `${total ? (s.lit / total) * 100 : 0}%` }} /></span>
+      </span>
+      <span className="plan-card-go">{t('chat.plan.open')}<ChevronIcon size={16} /></span>
+    </button>
+  )
+}
+
+function ToolPill({ display, onOpenTree, knowledge }) {
   if (!display) return null
-  if (display.type === 'plan') {
-    return (
-      <button type="button" className="pill pill-plan" onClick={onOpenTree}>
-        <TreeIcon size={16} />
-        <span>{fill(t('chat.tool.plan'), { name: richToPlain(display.goal.name), added: display.added, merged: display.merged })}</span>
-      </button>
-    )
-  }
+  if (display.type === 'plan') return <PlanCard display={display} knowledge={knowledge} onOpenTree={onOpenTree} />
   if (display.type === 'record') {
     if (display.level >= 1) {
       return (
@@ -119,7 +133,7 @@ export function Chat({ chatId }) {
           <button type="button" className="tree-chip" onClick={openTree} aria-label={t('chip.open')}>
             <span className="tt-scope"><ProgressRing lit={s.lit} total={s.total} size={22} /></span>
             <span>{s.lit}/{s.total}</span>
-            {due > 0 && <b className="due">{due}</b>}
+            {due > 0 && <b className="due" title={fill(t('review.today'), { n: due })}><ClockIcon />{due}</b>}
           </button>
         )}
       </header>
@@ -129,12 +143,19 @@ export function Chat({ chatId }) {
           <div className="chat-empty">
             <TreeIcon size={40} />
             <p>{t('chat.empty')}</p>
+            {goals.length === 0 && (
+              <div className="examples">
+                {[t('home.example.1'), t('home.example.2'), t('home.example.3')].map(x => (
+                  <button key={x} type="button" className="chip" onClick={() => doSend(fill(t('goal.prompt'), { goal: x }), fill(t('label.goal'), { goal: x }))}>{x}</button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {chat.messages.map((m, i) => {
           if (m.role === 'user') return <div key={i} className="msg msg-user"><div className="bubble">{m.label || m.content}</div></div>
           if (m.role === 'assistant') return m.content ? <div key={i} className="msg msg-ai"><Markdown text={m.content} /></div> : null
-          if (m.role === 'tool') return <div key={i} className="msg msg-tool"><ToolPill display={m.display} onOpenTree={openTree} /></div>
+          if (m.role === 'tool') return <div key={i} className="msg msg-tool"><ToolPill display={m.display} onOpenTree={openTree} knowledge={knowledge} /></div>
           if (m.role === 'error') {
             return (
               <div key={i} className="msg msg-error">

@@ -329,3 +329,24 @@ h1, h2, p { margin: 0; }
 .menu button:active { background: var(--dsw-alias-interactive-bg-hover); }
 .menu button.danger { color: var(--app-danger); }
 .tt-goal-node .tt-goal-tag { top: -15px; right: 8px; }
+
+/* ---- Chat (v1.1) ---- */
+.pill span { white-space: normal; overflow: visible; }
+.pill { border-radius: 16px; line-height: 1.4; }
+/* Medal colours tuned for readable text on top (WCAG AA for the label). */
+.pill-lit.pill-m-1 { --m: #a8642f; color: #fff; background: linear-gradient(135deg, #c98a55, #a15d2a); }
+.pill-lit.pill-m-2 { --m: #8a9bb4; color: #172133; background: linear-gradient(135deg, #eef2f7, #bfcad9); border: 1px solid #a9b6c8; }
+.pill-lit.pill-m-3 { color: #3b2600; background: linear-gradient(135deg, #ffe29a, #eeb031); }
+.pill-merge-1, .pill-merge-2, .pill-merge-3 { font-weight: 650; }
+.plan-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 12px 12px 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 30%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--dsw-alias-brand-primary) 9%, var(--app-surface)), var(--app-surface)); text-align: left; box-shadow: 0 6px 18px -14px var(--dsw-alias-brand-primary); }
+.plan-card:active { transform: scale(.99); }
+.plan-card-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: #fff; background: linear-gradient(135deg, var(--dsw-alias-brand-primary), color-mix(in srgb, var(--dsw-alias-brand-primary) 60%, #8b5cf6)); }
+.plan-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.plan-card-body b { font-size: 14.5px; line-height: 1.35; }
+.plan-card-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12.5px; color: var(--dsw-alias-label-tertiary); }
+.plan-card-meta em { font-style: normal; font-weight: 650; color: color-mix(in srgb, #b7791f 85%, var(--dsw-alias-label-primary)); }
+.plan-card .bar { height: 5px; margin-top: 2px; }
+.plan-card-go { flex: none; display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 650; color: var(--dsw-alias-brand-primary); }
+.tree-chip .due { display: inline-flex; align-items: center; gap: 3px; padding: 0 7px 0 5px; }
+.tree-chip .due svg { width: 12px; height: 12px; }
+.chat-empty .examples { justify-content: center; margin-top: 4px; }
