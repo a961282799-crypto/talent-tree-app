@@ -121,7 +121,8 @@ test('reasoning is replayed only within the running tool exchange', async () => 
 test('provider presets resolve to an address, key and model', async () => {
   const { activeAI, PROVIDERS } = await import('../src/providers.js')
   assert.equal(PROVIDERS[0].id, 'deepseek')
-  assert.deepEqual(activeAI({ provider: 'deepseek', providers: {} }), { provider: 'deepseek', apiKey: '', baseUrl: 'https://api.deepseek.com', model: 'deepseek-flash' })
+  assert.deepEqual(activeAI({ provider: 'deepseek', providers: {} }), { provider: 'deepseek', apiKey: '', baseUrl: 'https://api.deepseek.com', model: 'deepseek-flash', visionModel: 'deepseek-v4-flash-vision-exp' })
+  assert.equal(activeAI({ provider: 'glm', providers: { glm: { visionModel: 'my-vl' } } }).visionModel, 'my-vl')
   const kimi = activeAI({ provider: 'kimi', providers: { kimi: { apiKey: 'k', model: '' } } })
   assert.equal(kimi.baseUrl, 'https://api.moonshot.cn/v1')
   assert.equal(kimi.apiKey, 'k')
