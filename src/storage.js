@@ -8,7 +8,7 @@
 import { useSyncExternalStore } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
-import { emptyStore } from './graph.js'
+import { emptyStore, mergeNodes } from './graph.js'
 import { DEFAULT_PROVIDER } from './providers.js'
 import { setLanguage } from './i18n.js'
 
@@ -183,6 +183,25 @@ export function updateChat(id, change) {
   set({ chats: { ...state.chats, [id]: chat } })
   persist(K_CHAT(id), chat)
   return chat
+}
+
+/** After a merge: every conversation that showed `fromId` as a goal shows `intoId` instead. */
+export function replaceGoalEverywhere(fromId, intoId, intoName) {
+  for (const chat of Object.values(state.chats)) {
+    if (!chat.goals.some(g => g.id === fromId)) continue
+    updateChat(chat.id, c => ({
+      ...c,
+      goals: c.goals.map(g => (g.id === fromId ? { id: intoId, name: intoName } : g)).filter((g, i, all) => all.findIndex(x => x.id === g.id) === i),
+    }))
+  }
+}
+
+/** Merge two knowledge points by hand (from a node's detail card). */
+export function mergeKnowledge(fromId, intoId) {
+  const next = mergeNodes(state.knowledge, fromId, intoId)
+  setKnowledge(next)
+  replaceGoalEverywhere(fromId, intoId, next.nodes[intoId].name)
+  return next.nodes[intoId]
 }
 
 export function deleteChat(id) {

@@ -37,7 +37,15 @@ function ToolPill({ display, onOpenTree }) {
     }
     return <div className="pill">{fill(t(display.weak ? 'chat.tool.weak' : 'chat.tool.unlight'), { name: richToPlain(display.name) })}</div>
   }
-  if (display.type === 'error') return <div className="pill pill-muted">{t('chat.tool.error')}</div>
+  if (display.type === 'merge') {
+    return (
+      <button type="button" className={`pill pill-merge${display.mastery >= 1 ? ` pill-merge-${display.mastery}` : ''}`} onClick={onOpenTree}>
+        <TreeIcon size={16} />
+        <span>{fill(t('chat.tool.merge'), { from: richToPlain(display.from), into: richToPlain(display.into) })}{display.mastery >= 1 ? ` · ${LEVEL(display.mastery)}` : ''}</span>
+      </button>
+    )
+  }
+  // Rejected tool calls (e.g. lighting before the learner answered) are the AI's business; it explains in its reply.
   return null
 }
 

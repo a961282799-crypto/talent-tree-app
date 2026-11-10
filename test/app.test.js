@@ -14,7 +14,7 @@ const plan = {
 }
 
 test('tools are exposed in OpenAI function format', () => {
-  assert.deepEqual(TOOLS.map(t => t.function.name), ['techtree_plan', 'techtree_record', 'techtree_view'])
+  assert.deepEqual(TOOLS.map(t => t.function.name), ['techtree_plan', 'techtree_record', 'techtree_merge', 'techtree_view'])
   assert.equal(TOOLS[0].type, 'function')
   assert.ok(TOOLS[0].function.parameters.properties.nodes)
   assert.match(systemPrompt(), /techtree_plan/)

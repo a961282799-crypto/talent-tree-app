@@ -4,7 +4,7 @@
  * tools locally until the model gives its answer.
  */
 import { TOOLS, executeTool, systemPrompt } from './tutor.js'
-import { getState, setKnowledge, setLive, updateChat } from './storage.js'
+import { getState, replaceGoalEverywhere, setKnowledge, setLive, updateChat } from './storage.js'
 import { fill, t } from './i18n.js'
 import { activeAI } from './providers.js'
 
@@ -201,6 +201,10 @@ export async function send(chatId, text, onEvent, label) {
   } else {
     updateChat(chatId, c => ({ ...c, messages: c.messages.filter(m => m.role !== 'error') }))
   }
+  // Lighting rules for this turn: only the learner's own words can light a node,
+  // and each node rises at most one level per reply (see executeTool).
+  const lastUser = [...getState().chats[chatId].messages].reverse().find(m => m.role === 'user')
+  const turn = { learnerAnswered: Boolean(lastUser && !lastUser.label), raised: new Set() }
   try {
     for (let round = 0; ; round++) {
       if (round >= MAX_ROUNDS) throw new AiError(t('error.loop'), 'loop')
@@ -208,7 +212,7 @@ export async function send(chatId, text, onEvent, label) {
       const chat = getState().chats[chatId]
       const reply = await complete({
         settings: activeAI(getState().settings),
-        messages: [{ role: 'system', content: systemPrompt() }, ...apiMessages(chat.messages)],
+        messages: [{ role: 'system', content: systemPrompt(getState().knowledge) }, ...apiMessages(chat.messages)],
         tools: TOOLS,
         signal: controller.signal,
         onText: content => setLive(chatId, { content, status: 'writing' }),
@@ -223,8 +227,10 @@ export async function send(chatId, text, onEvent, label) {
         const current = getState()
         const result = args === null
           ? { text: 'Error: arguments are not valid JSON', knowledge: current.knowledge, goals: current.chats[chatId].goals, display: { type: 'error', message: 'invalid JSON' } }
-          : executeTool(call.function.name, args, { knowledge: current.knowledge, goals: current.chats[chatId].goals, now: Date.now() })
+          : executeTool(call.function.name, args, { knowledge: current.knowledge, goals: current.chats[chatId].goals, now: Date.now(), turn })
         if (result.knowledge !== current.knowledge) setKnowledge(result.knowledge)
+        // A merged point may be a goal in other conversations too.
+        if (result.display?.type === 'merge') replaceGoalEverywhere(result.display.fromId, result.display.intoId, result.display.into)
         updateChat(chatId, c => ({
           ...c,
           goals: result.goals,

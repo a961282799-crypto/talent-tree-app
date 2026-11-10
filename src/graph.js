@@ -254,6 +254,7 @@ export function buildSnapshot(store, goals, now) {
       ...(n.weak ? { weak: true } : {}),
       ...(n.reviewedAt !== undefined ? { reviewedAt: n.reviewedAt } : {}),
       ...(n.est_minutes !== undefined ? { est_minutes: n.est_minutes } : {}),
+      ...(n.history?.length ? { evidence: n.history[n.history.length - 1].evidence } : {}),
     }
   })
   return { version: 1, goals: goals.map(g => ({ id: g.id, name: store.nodes[g.id]?.name ?? g.name })), nodes, at: now }
@@ -331,4 +332,137 @@ export function buildLibrary(store, now) {
       return { goal: snapshot.goals[0], nodes: snapshot.nodes, at: goal.at || now }
     }),
   }
+}
+
+// ---- reusing knowledge across goals ------------------------------------------
+
+/** A name reduced for fuzzy matching: normalized, minus filler characters that wording often adds. */
+function looseName(name) {
+  return normalizeName(String(name).replace(/\$[^$]*\$/g, m => m.replace(/\\[a-z]+/gi, ''))).replace(/[的之与和及]/g, '')
+}
+
+function bigrams(s) {
+  const out = new Set()
+  if (s.length === 1) out.add(s)
+  for (let i = 0; i < s.length - 1; i++) out.add(s.slice(i, i + 2))
+  return out
+}
+
+/**
+ * How alike two knowledge-point names are, 0-1. Containment ("导数" in "导数的定义")
+ * and character-pair overlap both count, so different wordings of one idea score high.
+ */
+export function nameSimilarity(a, b) {
+  const x = looseName(a)
+  const y = looseName(b)
+  if (!x || !y) return 0
+  if (x === y) return 1
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x]
+  if (short.length >= 2 && long.includes(short)) return 0.6 + 0.4 * (short.length / long.length)
+  const A = bigrams(x)
+  const B = bigrams(y)
+  let shared = 0
+  for (const g of A) if (B.has(g)) shared++
+  return (2 * shared) / (A.size + B.size)
+}
+
+/** Score at or above which two names are worth asking about. */
+export const SIMILAR_AT = 0.72
+
+/**
+ * Newly added points that look like points the map already had, best match first.
+ * @param {object} store - the map after merging the plan
+ * @param {string[]} addedIds - ids the plan created
+ * @returns {{ id: string, name: string, existingId: string, existingName: string, score: number }[]}
+ */
+export function likelyDuplicates(store, addedIds) {
+  const added = new Set(addedIds)
+  const existing = Object.values(store.nodes).filter(n => !added.has(n.id))
+  const out = []
+  for (const id of addedIds) {
+    const node = store.nodes[id]
+    if (!node) continue
+    let best = null
+    for (const other of existing) {
+      const names = [other.name, ...(other.aliases ?? [])]
+      const score = Math.max(...names.map(n => nameSimilarity(node.name, n)))
+      if (score >= SIMILAR_AT && (!best || score > best.score)) best = { id, name: node.name, existingId: other.id, existingName: other.name, score }
+    }
+    if (best) out.push(best)
+  }
+  return out.sort((a, b) => b.score - a.score)
+}
+
+/**
+ * Merge one knowledge point into another without mutating the store: the
+ * learner keeps the better mastery, every reference and goal moves to `intoId`,
+ * and the old name stays as an alias.
+ * @throws Error when either id is unknown, they are the same, or the merge would form a cycle.
+ */
+export function mergeNodes(store, fromId, intoId) {
+  const from = store.nodes[fromId]
+  const into = store.nodes[intoId]
+  if (!from) throw new Error(`unknown node "${fromId}"`)
+  if (!into) throw new Error(`unknown node "${intoId}"`)
+  if (fromId === intoId) throw new Error('cannot merge a node into itself')
+  // One building on the other means they are different knowledge.
+  if (closure(store, [intoId]).has(fromId) || closure(store, [fromId]).has(intoId)) {
+    throw new Error(`"${from.name}" and "${into.name}" are not the same knowledge: one is a prerequisite of the other`)
+  }
+  const keep = (from.mastery ?? 0) > (into.mastery ?? 0) ? from : into
+  const aliases = new Set([...(into.aliases ?? []), ...(from.aliases ?? []), from.name])
+  aliases.delete(into.name)
+  const history = [...(into.history ?? []), ...(from.history ?? [])].sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).slice(-20)
+  const reviewed = [into.reviewedAt, from.reviewedAt].filter(v => v !== undefined)
+  const merged = {
+    ...into,
+    summary: into.summary || from.summary,
+    ...(into.hook || from.hook ? { hook: into.hook || from.hook } : {}),
+    ...(into.glossary?.length || from.glossary?.length ? { glossary: into.glossary?.length ? into.glossary : from.glossary } : {}),
+    est_minutes: into.est_minutes ?? from.est_minutes,
+    prerequisites: [...new Set([...into.prerequisites, ...from.prerequisites])].filter(p => p !== intoId && p !== fromId),
+    mastery: keep.mastery ?? 0,
+    weak: keep.weak === true,
+    ...(reviewed.length ? { reviewedAt: Math.max(...reviewed) } : {}),
+    ...(history.length ? { history } : {}),
+    ...(aliases.size ? { aliases: [...aliases] } : {}),
+  }
+  if (merged.est_minutes === undefined) delete merged.est_minutes
+  if (!merged.weak) delete merged.weak
+  const nodes = {}
+  for (const [id, node] of Object.entries(store.nodes)) {
+    if (id === fromId) continue
+    if (id === intoId) { nodes[id] = merged; continue }
+    nodes[id] = node.prerequisites.includes(fromId)
+      ? { ...node, prerequisites: [...new Set(node.prerequisites.map(p => (p === fromId ? intoId : p)))].filter(p => p !== id) }
+      : node
+  }
+  const cycle = findCycle(nodes)
+  if (cycle) throw new Error(`merging would form a cycle: ${cycle.join(' -> ')}; these are probably not the same knowledge`)
+  const goals = { ...(store.goals ?? {}) }
+  if (goals[fromId]) {
+    if (!goals[intoId]) goals[intoId] = { ...goals[fromId], id: intoId, name: merged.name }
+    delete goals[fromId]
+  }
+  const next = { ...store, nodes, ...(store.goals ? { goals } : {}) }
+  if (store.hidden) next.hidden = [...new Set(store.hidden.map(id => (id === fromId ? intoId : id)))]
+  return next
+}
+
+/**
+ * The map as a compact list for the model, so a plan in a new conversation can
+ * reuse existing points. Lit and recently studied points come first.
+ */
+export function mapDigest(store, limit = 400) {
+  const all = Object.values(store.nodes)
+  if (all.length === 0) return ''
+  const ordered = [...all].sort((a, b) => ((b.mastery ?? 0) >= 1) - ((a.mastery ?? 0) >= 1) || (b.reviewedAt ?? 0) - (a.reviewedAt ?? 0))
+  const lines = ordered.slice(0, limit).map(n => `${n.id} · ${n.name} · ${n.mastery ?? 0}${n.weak ? 'w' : ''}`)
+  if (all.length > limit) lines.push(`(${all.length - limit} more points not listed)`)
+  return lines.join('\n')
+}
+
+/** Goals (from the map's goal list) whose trees contain the node. */
+export function goalsContaining(store, nodeId) {
+  return goalsOf(store).filter(g => closure(store, [g.id]).has(nodeId))
 }

@@ -1005,7 +1005,7 @@ function Graph({ t, nodes, goalIds, selected, hover, onSelect, onHover, now, coo
         h('span', null, h(Rich, { text: g.meaning }))))) : null) : null)
 }
 
-function Detail({ t, node, nodes, onJump, onClose, act, now, routeIds }) {
+function Detail({ t, node, nodes, onJump, onClose, act, now, routeIds, alsoIn, onOpenGoal, onMerge }) {
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
   const state = stateOf(node, byId)
   const unlocks = nodes.filter(n => n.prerequisites.includes(node.id))
@@ -1054,6 +1054,11 @@ function Detail({ t, node, nodes, onJump, onClose, act, now, routeIds }) {
       h('div', { className: 'tt-route-list' }, route.map((n, i) => h('button', { key: n.id, type: 'button', className: 'tt-route-step', onClick: () => onJump(n.id) }, h('b', null, i + 1), h(Rich, { text: n.name }))))) : null,
     links(t('detail.prereqs'), node.prerequisites.map(id => byId[id]).filter(Boolean)),
     links(t('detail.unlocks'), unlocks),
+    node.mastery >= 1 && node.evidence ? h('div', { className: 'tt-evidence' }, h('b', null, `${t('detail.evidence')}：`), h(Rich, { text: node.evidence })) : null,
+    alsoIn && alsoIn.length ? h('div', { className: 'tt-links tt-also' },
+      h('span', null, `${t('detail.alsoIn')}：`),
+      alsoIn.map(g => h('button', { key: g.id, type: 'button', className: 'tt-link tt-link-goal', onClick: () => onOpenGoal && onOpenGoal(g) }, h(FlagIcon), h(Rich, { text: g.name })))) : null,
+    onMerge ? h('button', { type: 'button', className: 'tt-merge-link', onClick: () => onMerge(node) }, t('merge.open')) : null,
     h('div', { className: 'tt-actions' }, actions))
 }
 
@@ -1093,7 +1098,7 @@ function useCelebrations(t, nodes, camera, coords) {
 }
 
 /** Tree canvas with legend, tools, the selected node's card and toasts. */
-function Stage({ t, title, nodes, goalIds, act, fitKey }) {
+function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, onMerge }) {
   const [selected, setSelected] = useState(null)
   const [hover, setHover] = useState(null)
   const camera = useRef(null)
@@ -1147,7 +1152,7 @@ function Stage({ t, title, nodes, goalIds, act, fitKey }) {
         legend,
         toasts.length ? h('div', { className: 'tt-overlay tt-toasts', role: 'status' }, toasts.map(x => h('div', { key: x.id, className: `tt-toast tt-toast-${x.kind}` }, x.kind === 'lit' ? h(StarIcon) : x.kind === 'unlock' ? h(SparkIcon, { size: 15 }) : null, x.text))) : null,
         current
-          ? h(Detail, { key: current.id, t, node: current, nodes, onJump: jump, onClose: () => setSelected(null), act, now, routeIds })
+          ? h(Detail, { key: current.id, t, node: current, nodes, onJump: jump, onClose: () => setSelected(null), act, now, routeIds, alsoIn: alsoInOf ? alsoInOf(current.id) : null, onOpenGoal, onMerge })
           : h('div', { className: 'tt-overlay tt-hint' }, t('view.hint'))),
     }, view => h(Graph, {
       t, nodes, goalIds, selected: current ? selected : null, hover, onSelect: pick, onHover: setHover,
