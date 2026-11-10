@@ -176,6 +176,13 @@ const enBase = {
   'view.hint': 'Hover for the hook · drag to pan · wheel to zoom · double-click to reset',
 }
 const zhApp = {
+  'legend.title': '图例',
+  'tree.menu': '更多',
+  'tree.export': '导出图片',
+  'tree.fitAll': '看整棵树',
+  'hero.progress': '已点亮 {lit}/{total}',
+  'hero.frontier': '可学 {n} 个',
+  'hero.review': '复习 {n}',
   'detail.evidence': '点亮依据',
   'detail.alsoIn': '也出现在',
   'merge.open': '和别的知识点重复了？',
@@ -287,6 +294,13 @@ const zhApp = {
 }
 
 const enApp = {
+  'legend.title': 'Legend',
+  'tree.menu': 'More',
+  'tree.export': 'Export image',
+  'tree.fitAll': 'Show whole tree',
+  'hero.progress': '{lit}/{total} lit',
+  'hero.frontier': '{n} learnable',
+  'hero.review': 'Review {n}',
   'detail.evidence': 'Why it is lit',
   'detail.alsoIn': 'Also in',
   'merge.open': 'Duplicate of another point?',

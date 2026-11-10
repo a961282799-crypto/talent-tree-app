@@ -13,3 +13,4 @@ export const PlusIcon = p => <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>
 export const ChevronIcon = p => <Svg {...p}><path d="M9 6l6 6-6 6" /></Svg>
 export const KeyIcon = p => <Svg {...p}><circle cx="8" cy="15" r="4" /><path d="M11 12l9-9M17 6l3 3M15 8l2 2" /></Svg>
 export const AlertIcon = p => <Svg {...p}><path d="M12 4 2.5 20h19z" /><path d="M12 10v4M12 17h.01" /></Svg>
+export const MoreIcon = p => <Svg {...p}><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></Svg>

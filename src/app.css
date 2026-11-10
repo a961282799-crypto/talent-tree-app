@@ -292,3 +292,40 @@ h1, h2, p { margin: 0; }
 .pill-merge { color: color-mix(in srgb, #b7791f 85%, var(--dsw-alias-label-primary)); border-color: color-mix(in srgb, #eeb031 45%, transparent); background: color-mix(in srgb, #eeb031 10%, var(--app-surface)); }
 .tt-evidence { padding: 8px 10px; border-radius: 10px; background: var(--tt-bg2, var(--dsw-alias-bg-layer-2)); font-size: 12.5px; line-height: 1.5; color: var(--tt-muted); }
 .tt-evidence b { color: var(--tt-fg); font-weight: 650; }
+
+/* ---- Tree screen, full-bleed (v1.1) ---- */
+.screen-tree .tree-body { padding: 0; gap: 0; }
+.tree-progress { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
+.tree-progress .tt-ring { width: 40px !important; height: 40px !important; }
+.tree-progress .tt-ring b { font-size: 10.5px; }
+.tree-progress-text { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 1px; font-size: 13px; color: var(--tt-fg2); }
+.tree-progress-text b { font-size: 14.5px; color: var(--tt-fg); font-weight: 700; }
+.tree-medals { display: inline-flex; gap: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tree-medals > span { display: inline-flex; align-items: center; gap: 4px; }
+.tree-medals i { width: 8px; height: 8px; border-radius: 50%; }
+.tree-progress .tt-review { flex: none; height: 32px; }
+.screen-tree .tt-stage { border-radius: 0; border: none; border-top: 1px solid var(--tt-line-soft); min-height: 0; }
+.screen-tree .tt-card { bottom: calc(10px + var(--safe-bottom)); }
+.tt-card { transition: transform .22s cubic-bezier(.2, .8, .3, 1), max-height .22s ease; touch-action: pan-y; }
+.tt-card.tt-card-dragging { transition: none; }
+.tt-card.tt-card-expanded { max-height: 86%; }
+.tt-card-grip { display: flex; justify-content: center; margin: -8px -14px 2px; padding: 6px 0 4px; cursor: grab; touch-action: none; }
+.tt-card-grip i { width: 38px; height: 5px; border-radius: 3px; background: var(--tt-line); }
+.tt-card-head { touch-action: none; }
+.tt-overlay.tt-fab { right: 12px; bottom: calc(14px + var(--safe-bottom)); pointer-events: auto; }
+.fab { display: inline-flex; align-items: center; gap: 4px; height: 46px; padding: 0 14px 0 20px; border: none; border-radius: 999px; color: #fff; font-size: 15px; font-weight: 650; background: linear-gradient(135deg, var(--dsw-alias-brand-primary), color-mix(in srgb, var(--dsw-alias-brand-primary) 68%, #8b5cf6)); box-shadow: 0 10px 24px -10px var(--dsw-alias-brand-primary), 0 2px 6px rgba(0, 0, 0, .12); }
+.fab:active { transform: scale(.97); }
+.tt-hint.tt-hint-left { left: 14px; right: auto; transform: none; bottom: calc(26px + var(--safe-bottom)); max-width: calc(100% - 190px); white-space: normal; text-align: left; line-height: 1.4; }
+.tt-overlay.tt-legend-toggle { left: 10px; top: 10px; pointer-events: auto; gap: 5px; height: 28px; padding: 0 10px 0 6px; border-radius: 999px; border: 1px solid var(--tt-line-soft); background: color-mix(in srgb, var(--tt-bg) 92%, transparent); backdrop-filter: blur(6px); font: inherit; font-size: 12px; color: var(--tt-fg2); }
+.tt-legend-toggle i { display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--tt-fg3); color: var(--tt-bg); font-style: normal; font-size: 11px; font-weight: 800; font-family: Georgia, serif; }
+.tt-overlay.tt-legend-open { pointer-events: auto; padding: 8px; border-radius: 14px; border: 1px solid var(--tt-line-soft); background: color-mix(in srgb, var(--tt-bg) 95%, transparent); backdrop-filter: blur(8px); box-shadow: 0 8px 22px -12px rgba(0, 0, 0, .3); cursor: pointer; }
+.tt-legend.tt-legend-open .tt-legend-row + .tt-legend-row { display: flex !important; }
+.tt-goal-node .tt-node-text { padding-right: 18px; }
+
+/* Overflow menu */
+.menu-backdrop { position: absolute; inset: 0; z-index: 15; }
+.menu { position: absolute; top: calc(50px + var(--safe-top)); right: 10px; min-width: 180px; display: flex; flex-direction: column; padding: 6px; border-radius: 14px; background: var(--app-surface); border: 1px solid var(--dsw-alias-border-l1); box-shadow: 0 14px 36px -12px rgba(0, 0, 0, .35); animation: fade-in .14s ease-out; }
+.menu button { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border: none; border-radius: 10px; background: none; text-align: left; font-size: 15px; }
+.menu button:active { background: var(--dsw-alias-interactive-bg-hover); }
+.menu button.danger { color: var(--app-danger); }
+.tt-goal-node .tt-goal-tag { top: -15px; right: 8px; }

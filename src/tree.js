@@ -632,7 +632,7 @@ function Hero({ t, title, nodes, extra, onReview }) {
  * automatic fit zooms in on when the whole tree would be too small to read.
  * `children` may be a function of the current view.
  */
-function Viewport({ t, width, height, fitKey, focus, camera, children, overlay, tools }) {
+function Viewport({ t, width, height, fitKey, focus, camera, children, overlay, tools, onBlankTap }) {
   const ref = useRef(null)
   const [view, setView] = useState({ x: 24, y: 24, k: 1 })
   const [dragging, setDragging] = useState(false)
@@ -661,9 +661,10 @@ function Viewport({ t, width, height, fitKey, focus, camera, children, overlay, 
     const el = ref.current
     if (!el || !el.clientWidth || !el.clientHeight) return null
     // Room for the legend / zoom bar above and the hint below.
+    // Phones keep room for the floating "continue" button at the bottom.
     const padX = 28
     const padTop = 92
-    const padBottom = 40
+    const padBottom = el.clientWidth < 520 ? 88 : 40
     const k = clamp(Math.min((el.clientWidth - padX * 2) / width, (el.clientHeight - padTop - padBottom) / height, 1), MIN_ZOOM, 1)
     return { k, x: (el.clientWidth - width * k) / 2, y: Math.max(padTop, padTop + (el.clientHeight - padTop - padBottom - height * k) / 2) }
   }, [width, height])
@@ -698,21 +699,33 @@ function Viewport({ t, width, height, fitKey, focus, camera, children, overlay, 
     const v = fitView()
     if (!v) return
     const f = focusRef.current
-    if (smart && f && v.k < 0.62) {
-      const el = ref.current
-      put({ k: 0.9, x: el.clientWidth / 2 - f.x * 0.9, y: el.clientHeight * 0.42 - f.y * 0.9 })
+    const el = ref.current
+    // On a phone, a whole tree squeezed into the screen is too small to read:
+    // open at normal size on the recommended point instead (the fit button shows everything).
+    const narrow = el.clientWidth < 520
+    const readable = narrow ? 0.88 : 0.62
+    if (smart && f && v.k < readable) {
+      const k = narrow ? 1 : 0.9
+      put({ k, x: el.clientWidth / 2 - f.x * k, y: el.clientHeight * 0.4 - f.y * k })
     } else put(v)
   }, [fitView, put])
 
-  /** Bring a canvas point into the upper part of the view (above the detail card) when it is not already there. */
-  const reveal = (cx, cy) => {
+  /**
+   * Make sure a node centred on canvas point (cx, cy) is fully visible in the part of
+   * the view that `bottomInset` pixels of detail card leave free; fly there if not.
+   */
+  const reveal = (cx, cy, bottomInset) => {
     const el = ref.current
     if (!el || !el.clientWidth) return
     const v = viewRef.current
+    const top = 52
+    const bottom = el.clientHeight - (bottomInset || 0) - 14
+    const k = el.clientWidth < 520 ? Math.max(v.k, 0.85) : v.k
     const sx = cx * v.k + v.x
     const sy = cy * v.k + v.y
-    if (sx > 40 && sx < el.clientWidth - 40 && sy > 70 && sy < el.clientHeight * 0.42) return
-    flyTo(cx, cy, { k: v.k, anchorY: 0.28 })
+    const half = (NODE_H / 2 + 26) * v.k
+    if (k === v.k && sx > 30 && sx < el.clientWidth - 30 && sy - half > top && sy + half < bottom) return
+    flyTo(cx, cy, { k, anchorY: clamp((top + bottom) / 2 / el.clientHeight, 0.12, 0.6) })
   }
   if (camera) camera.current = { flyTo, reveal, fit: () => { touched.current = false; stop(); fit(false) } }
 
@@ -859,6 +872,9 @@ function Viewport({ t, width, height, fitKey, focus, camera, children, overlay, 
     event.stopPropagation()
     event.preventDefault()
   }
+  const onClick = event => {
+    if (onBlankTap && !(event.target.closest && event.target.closest('.tt-node, .tt-overlay, .tt-card'))) onBlankTap()
+  }
   const onDoubleClick = event => {
     if (event.target.closest && event.target.closest('.tt-node, .tt-overlay, .tt-card')) return
     touched.current = false
@@ -884,7 +900,7 @@ function Viewport({ t, width, height, fitKey, focus, camera, children, overlay, 
       ref, tabIndex: 0, className: 'tt-viewport' + (dragging ? ' tt-dragging' : ''),
       style: { backgroundSize: `${grid}px ${grid}px`, backgroundPosition: `${view.x}px ${view.y}px` },
       onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag,
-      onClickCapture, onDoubleClick, onKeyDown,
+      onClickCapture, onClick, onDoubleClick, onKeyDown,
     },
     h('div', { className: 'tt-canvas', style: { width, height, transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})` } },
       typeof children === 'function' ? children(view) : children)),
@@ -1036,8 +1052,38 @@ function Detail({ t, node, nodes, onJump, onClose, act, now, routeIds, alsoIn, o
     actions.push(h('button', { key: 'review', type: 'button', className: 'tt-btn tt-btn-primary', onClick: () => act(fill(t('prompt.review'), vars), fill(t('label.review'), vars)) }, t('action.review')))
     if (node.mastery < 3) actions.push(h('button', { key: 'check', type: 'button', className: 'tt-btn', onClick: () => act(fill(t('prompt.check'), vars), fill(t('label.levelUp'), vars)) }, t('action.levelUp')))
   }
-  return h('div', { className: 'tt-card', role: 'dialog', 'aria-label': node.name },
-    h('div', { className: 'tt-card-head' },
+  // Drag the grip or title: down to close, up to give the card more room.
+  const [expanded, setExpanded] = useState(false)
+  const [dy, setDy] = useState(0)
+  const dragStart = useRef(null)
+  const grab = {
+    onPointerDown: event => {
+      if (event.target.closest && event.target.closest('button')) return
+      dragStart.current = { y: event.clientY, id: event.pointerId }
+      try { event.currentTarget.setPointerCapture(event.pointerId) } catch {}
+    },
+    onPointerMove: event => {
+      if (!dragStart.current || dragStart.current.id !== event.pointerId) return
+      setDy(event.clientY - dragStart.current.y)
+    },
+    onPointerUp: event => {
+      if (!dragStart.current || dragStart.current.id !== event.pointerId) return
+      const moved = event.clientY - dragStart.current.y
+      dragStart.current = null
+      setDy(0)
+      if (moved > 70) onClose()
+      else if (moved < -40) setExpanded(true)
+      else if (moved > 30 && expanded) setExpanded(false)
+    },
+  }
+  grab.onPointerCancel = () => { dragStart.current = null; setDy(0) }
+  return h('div', {
+    className: 'tt-card' + (expanded ? ' tt-card-expanded' : '') + (dy ? ' tt-card-dragging' : ''),
+    role: 'dialog', 'aria-label': node.name,
+    style: dy ? { transform: `translateY(${Math.max(dy, -60)}px)` } : undefined,
+  },
+    h('div', { className: 'tt-card-grip', ...grab, 'aria-hidden': true }, h('i')),
+    h('div', { className: 'tt-card-head', ...grab },
       h(Badge, { state, node, isGoal: false }),
       h('div', { className: 'tt-card-title' }, h(Rich, { text: node.name })),
       h('button', { type: 'button', className: 'tt-icon-btn', title: t('detail.close'), 'aria-label': t('detail.close'), onClick: onClose }, h(CloseIcon))),
@@ -1098,10 +1144,12 @@ function useCelebrations(t, nodes, camera, coords) {
 }
 
 /** Tree canvas with legend, tools, the selected node's card and toasts. */
-function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, onMerge }) {
+function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, onMerge, fab, camera: cameraOut }) {
   const [selected, setSelected] = useState(null)
   const [hover, setHover] = useState(null)
   const camera = useRef(null)
+  const stageRef = useRef(null)
+  const [legendOpen, setLegendOpen] = useState(false)
   const now = Date.now()
   const byId = useMemo(() => Object.fromEntries(nodes.map(n => [n.id, n])), [nodes])
   const { coords, width, height } = useMemo(() => layout(nodes), [nodes])
@@ -1111,19 +1159,18 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
   const routeSteps = routeIds.length > 1 ? Object.fromEntries(routeIds.map((id, i) => [id, i])) : null
   const { celebrate, toasts, notify } = useCelebrations(t, nodes, camera, coords)
   const center = id => ({ x: coords[id].x + NODE_W / 2, y: coords[id].y + NODE_H / 2 })
-  const jump = id => {
-    setSelected(id)
+  // Once the card for a newly selected node is laid out, keep the node visible above it.
+  const revealSelected = useRef(null)
+  useEffect(() => {
+    const id = revealSelected.current
+    revealSelected.current = null
+    if (!id || !coords[id] || !camera.current) return
+    const card = stageRef.current && stageRef.current.querySelector('.tt-card')
     const c = center(id)
-    // Keep the node above the detail card.
-    if (camera.current) camera.current.flyTo(c.x, c.y, { anchorY: 0.3 })
-  }
-  const pick = id => {
-    setSelected(id)
-    if (id && camera.current) {
-      const c = center(id)
-      camera.current.reveal(c.x, c.y)
-    }
-  }
+    camera.current.reveal(c.x, c.y, card ? card.offsetHeight + 12 : 0)
+  }, [selected])
+  const jump = id => { revealSelected.current = id; setSelected(id) }
+  const pick = id => { if (id) revealSelected.current = id; setSelected(id) }
   const locate = () => {
     if (!recommended) return
     const c = center(recommended)
@@ -1134,7 +1181,10 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
       how => { if (how !== 'cancelled') notify(t(how === 'copied' ? 'toast.copied' : 'toast.exported')) },
       () => notify(t('toast.exportFailed')))
   }
-  const legend = h('div', { className: 'tt-overlay tt-legend' },
+  if (cameraOut) cameraOut.current = { fit: () => camera.current && camera.current.fit(), locate }
+  const legend = !legendOpen
+    ? h('button', { type: 'button', className: 'tt-overlay tt-legend-toggle', 'aria-expanded': false, onClick: () => setLegendOpen(true) }, h('i', null, 'i'), t('legend.title'))
+    : h('div', { className: 'tt-overlay tt-legend tt-legend-open', role: 'button', tabIndex: 0, 'aria-expanded': true, onClick: () => setLegendOpen(false) },
     h('div', { className: 'tt-legend-row' },
       h('span', { className: 'tt-pill' }, h('i', { style: { background: 'linear-gradient(135deg,#c8834c,#eeb031)' } }), t('legend.lit')),
       h('span', { className: 'tt-pill' }, h('i', { style: { border: '1.5px dashed var(--tt-brand)' } }), t('legend.available')),
@@ -1142,18 +1192,20 @@ function Stage({ t, title, nodes, goalIds, act, fitKey, alsoInOf, onOpenGoal, on
     h(TypeLegend, { t, nodes }))
   const tools = h(React.Fragment, null,
     recommended ? h('button', { type: 'button', className: 'tt-icon-btn', title: t('action.recommend'), 'aria-label': t('action.recommend'), onClick: locate }, h(TargetIcon)) : null,
-    h('button', { type: 'button', className: 'tt-icon-btn', title: t('action.export'), 'aria-label': t('action.export'), onClick: doExport }, h(DownloadIcon)),
     h('span', { className: 'tt-zoom-sep' }))
-  return h('div', { className: 'tt-stage' },
+  return h('div', { className: 'tt-stage', ref: stageRef },
     h(Viewport, {
       t, width, height, fitKey, camera, tools,
+      onBlankTap: () => { setSelected(null); setLegendOpen(false) },
       focus: recommended ? center(recommended) : null,
       overlay: h(React.Fragment, null,
         legend,
         toasts.length ? h('div', { className: 'tt-overlay tt-toasts', role: 'status' }, toasts.map(x => h('div', { key: x.id, className: `tt-toast tt-toast-${x.kind}` }, x.kind === 'lit' ? h(StarIcon) : x.kind === 'unlock' ? h(SparkIcon, { size: 15 }) : null, x.text))) : null,
         current
           ? h(Detail, { key: current.id, t, node: current, nodes, onJump: jump, onClose: () => setSelected(null), act, now, routeIds, alsoIn: alsoInOf ? alsoInOf(current.id) : null, onOpenGoal, onMerge })
-          : h('div', { className: 'tt-overlay tt-hint' }, t('view.hint'))),
+          : h(React.Fragment, null,
+            h('div', { className: 'tt-overlay tt-hint' + (fab ? ' tt-hint-left' : '') }, t('view.hint')),
+            fab ? h('div', { className: 'tt-overlay tt-fab' }, fab) : null)),
     }, view => h(Graph, {
       t, nodes, goalIds, selected: current ? selected : null, hover, onSelect: pick, onHover: setHover,
       now, coords, routeSteps, recommended, celebrate, view,
