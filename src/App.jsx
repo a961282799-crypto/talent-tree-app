@@ -40,8 +40,14 @@ export function App() {
     if (!isNative) return undefined
     const handle = CapApp.addListener('backButton', () => {
       const { stack: s, tab: current } = state.current
-      if (document.querySelector('.tt-card')) {
-        document.querySelector('.tt-card .tt-icon-btn')?.click()
+      // Close the innermost thing first: a menu or sheet, then a detail card, then the screen.
+      const overlay = document.querySelector('.menu-backdrop, .sheet-backdrop')
+      if (overlay) {
+        overlay.click()
+      } else if (document.querySelector('.onboarding')) {
+        CapApp.exitApp()
+      } else if (document.querySelector('.tt-card')) {
+        document.querySelector('.tt-card .tt-card-head .tt-icon-btn')?.click()
       } else if (s.length) setStack(x => x.slice(0, -1))
       else if (current !== 'trees') setTab('trees')
       else CapApp.exitApp()

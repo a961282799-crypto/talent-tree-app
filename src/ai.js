@@ -199,7 +199,7 @@ export async function send(chatId, text, onEvent, extra) {
   if (text) {
     updateChat(chatId, c => ({
       ...c,
-      title: c.title || (label || text).replace(/\s+/g, ' ').slice(0, 40) || (opts.attachments?.[0]?.name ?? ''),
+      title: c.title || (label || opts.attachments?.[0]?.name || text).replace(/\s+/g, ' ').slice(0, 40),
       messages: [...c.messages.filter(m => m.role !== 'error'), { role: 'user', content: text, ...(label !== undefined ? { label } : {}), action: opts.action === true, ...(opts.attachments?.length ? { attachments: opts.attachments } : {}), at: Date.now() }],
     }))
   } else {
