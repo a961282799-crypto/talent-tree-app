@@ -14,3 +14,6 @@ export const ChevronIcon = p => <Svg {...p}><path d="M9 6l6 6-6 6" /></Svg>
 export const KeyIcon = p => <Svg {...p}><circle cx="8" cy="15" r="4" /><path d="M11 12l9-9M17 6l3 3M15 8l2 2" /></Svg>
 export const AlertIcon = p => <Svg {...p}><path d="M12 4 2.5 20h19z" /><path d="M12 10v4M12 17h.01" /></Svg>
 export const MoreIcon = p => <Svg {...p}><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></Svg>
+export const PaperclipIcon = p => <Svg {...p}><path d="M20.5 11.5 12.6 19.4a5 5 0 0 1-7.1-7.1l8.2-8.2a3.4 3.4 0 0 1 4.8 4.8l-8.2 8.2a1.7 1.7 0 0 1-2.4-2.4l7.6-7.6" /></Svg>
+export const FileIcon = p => <Svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></Svg>
+export const CloseSmallIcon = p => <Svg {...p} strokeWidth="2.4"><path d="M6 6l12 12M18 6 6 18" /></Svg>

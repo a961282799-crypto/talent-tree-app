@@ -112,6 +112,17 @@ export function Settings() {
           </div>
 
           <label className="field">
+            <span>{t('settings.visionModel')}</span>
+            <input
+              autoComplete="off" autoCapitalize="off" spellCheck={false}
+              placeholder={preset.visionModel || t('settings.model.placeholder')}
+              value={own.visionModel ?? ''}
+              onChange={e => setOwn({ visionModel: e.target.value.trim() })}
+            />
+            <small className="hint">{t(preset.visionModel ? 'settings.visionModel.hint' : 'settings.visionModel.none')}</small>
+          </label>
+
+          <label className="field">
             <span>{t('settings.baseUrl')}</span>
             <input
               type="url" autoComplete="off" autoCapitalize="off" spellCheck={false}

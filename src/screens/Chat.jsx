@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { buildSnapshot } from '../graph.js'
-import { useApp } from '../storage.js'
+import { getState, useApp } from '../storage.js'
+import { activeAI } from '../providers.js'
+import { MAX_IMAGES, MAX_PDFS, prepareMessage, readAttachment } from '../attachments.js'
 import { onToolEvent, useNav } from '../nav.js'
 import { send, stop } from '../ai.js'
 import { renderMarkdown } from '../markdown.js'
 import { fill, t } from '../i18n.js'
 import { ClockIcon, ProgressRing, StarIcon, TreeIcon, reviewQueue, richToPlain, stats } from '../tree.js'
-import { AlertIcon, BackIcon, ChevronIcon, SendIcon, StopIcon } from '../icons.jsx'
+import { AlertIcon, BackIcon, ChevronIcon, CloseSmallIcon, FileIcon, PaperclipIcon, SendIcon, StopIcon } from '../icons.jsx'
 
 function Markdown({ text }) {
   const html = useMemo(() => renderMarkdown(text), [text])
@@ -63,35 +65,98 @@ function ToolPill({ display, onOpenTree, knowledge }) {
   return null
 }
 
+/** Thumbnails of attached files, in the composer (removable) or in a sent message. */
+function AttachmentStrip({ items, onRemove }) {
+  return (
+    <div className="attach-strip">
+      {items.map((a, i) => (
+        <div key={a.id || i} className={`attach-item attach-${a.kind}`}>
+          {a.thumb ? <img src={a.thumb} alt={a.name} /> : <span className="attach-icon"><FileIcon size={22} /></span>}
+          {a.kind === 'pdf' && <span className="attach-badge">PDF{a.pages ? ` · ${fill(t('attach.pages'), { n: a.pages })}` : ''}</span>}
+          {onRemove && <button type="button" className="attach-remove" aria-label={t('attach.remove')} onClick={() => onRemove(a.id)}><CloseSmallIcon size={14} /></button>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Composer({ running, onSend, onStop }) {
+  const nav = useNav()
   const [text, setText] = useState('')
+  const [files, setFiles] = useState([])
+  const [busy, setBusy] = useState('')
   const ref = useRef(null)
+  const picker = useRef(null)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`
   }, [text])
-  const submit = event => {
+
+  const add = async event => {
+    const picked = [...(event.target.files ?? [])]
+    event.target.value = ''
+    if (!picked.length) return
+    setBusy(t('attach.reading'))
+    const next = [...files]
+    for (const file of picked) {
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      if (isPdf ? next.filter(f => f.kind === 'pdf').length >= MAX_PDFS : next.filter(f => f.kind === 'image').length >= MAX_IMAGES) {
+        nav.toast(fill(t(isPdf ? 'attach.tooManyPdfs' : 'attach.tooManyImages'), { n: isPdf ? MAX_PDFS : MAX_IMAGES }))
+        continue
+      }
+      try {
+        next.push(await readAttachment(file))
+      } catch (error) {
+        nav.toast(error.message)
+      }
+    }
+    setFiles(next)
+    setBusy('')
+  }
+
+  const submit = async event => {
     event?.preventDefault()
     const value = text.trim()
-    if (!value || running) return
-    onSend(value)
-    setText('')
+    if ((!value && files.length === 0) || running || busy) return
+    if (files.length === 0) {
+      onSend(value)
+      setText('')
+      return
+    }
+    setBusy(files.some(f => f.kind === 'image' || f.scanned) ? t('attach.looking') : t('attach.preparing'))
+    try {
+      const { content, meta } = await prepareMessage({ text: value, attachments: files, ai: activeAI(getState().settings) })
+      onSend(content, { label: value, action: false, attachments: meta })
+      setText('')
+      setFiles([])
+    } catch (error) {
+      nav.toast(error.message)
+    } finally {
+      setBusy('')
+    }
   }
+  const canSend = (text.trim() || files.length > 0) && !busy
   return (
-    <form className="composer" onSubmit={submit}>
-      <textarea
-        ref={ref}
-        rows={1}
-        value={text}
-        placeholder={t('chat.placeholder')}
-        onChange={e => setText(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia('(pointer: fine)').matches) submit(e) }}
-      />
-      {running
-        ? <button type="button" className="send stop" aria-label={t('chat.stop')} onClick={onStop}><StopIcon size={18} /></button>
-        : <button type="submit" className="send" aria-label={t('chat.send')} disabled={!text.trim()}><SendIcon size={20} /></button>}
+    <form className="composer-wrap" onSubmit={submit}>
+      {files.length > 0 && <AttachmentStrip items={files} onRemove={id => setFiles(list => list.filter(f => f.id !== id))} />}
+      {busy && <div className="composer-busy"><span className="typing"><i /><i /><i /></span>{busy}</div>}
+      <div className="composer">
+        <button type="button" className="attach-btn" aria-label={t('attach.add')} disabled={running || Boolean(busy)} onClick={() => picker.current?.click()}><PaperclipIcon size={22} /></button>
+        <input ref={picker} type="file" accept="image/*,application/pdf,.pdf" multiple hidden onChange={add} />
+        <textarea
+          ref={ref}
+          rows={1}
+          value={text}
+          placeholder={t('chat.placeholder')}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia('(pointer: fine)').matches) submit(e) }}
+        />
+        {running
+          ? <button type="button" className="send stop" aria-label={t('chat.stop')} onClick={onStop}><StopIcon size={18} /></button>
+          : <button type="submit" className="send" aria-label={t('chat.send')} disabled={!canSend}><SendIcon size={20} /></button>}
+      </div>
     </form>
   )
 }
@@ -121,7 +186,7 @@ export function Chat({ chatId }) {
   }, [chat?.messages.length, live?.content, live?.status])
 
   if (!chat) return null
-  const doSend = (text, label) => { stick.current = true; send(chatId, text, onToolEvent, label) }
+  const doSend = (text, extra) => { stick.current = true; send(chatId, text, onToolEvent, extra) }
   const title = goals.length ? goals.map(g => richToPlain(g.name)).join(' · ') : chat.title || t('chat.untitled')
 
   return (
@@ -153,7 +218,15 @@ export function Chat({ chatId }) {
           </div>
         )}
         {chat.messages.map((m, i) => {
-          if (m.role === 'user') return <div key={i} className="msg msg-user"><div className="bubble">{m.label || m.content}</div></div>
+          if (m.role === 'user') {
+            const shown = m.label !== undefined ? m.label : m.content
+            return (
+              <div key={i} className="msg msg-user">
+                {m.attachments?.length > 0 && <AttachmentStrip items={m.attachments} />}
+                {shown && <div className="bubble">{shown}</div>}
+              </div>
+            )
+          }
           if (m.role === 'assistant') return m.content ? <div key={i} className="msg msg-ai"><Markdown text={m.content} /></div> : null
           if (m.role === 'tool') return <div key={i} className="msg msg-tool"><ToolPill display={m.display} onOpenTree={openTree} knowledge={knowledge} /></div>
           if (m.role === 'error') {

@@ -22,6 +22,10 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>拍下题目或笔记，发给 AI 导师。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>从相册选择题目或笔记的照片，发给 AI 导师。</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -350,3 +350,20 @@ h1, h2, p { margin: 0; }
 .tree-chip .due { display: inline-flex; align-items: center; gap: 3px; padding: 0 7px 0 5px; }
 .tree-chip .due svg { width: 12px; height: 12px; }
 .chat-empty .examples { justify-content: center; margin-top: 4px; }
+
+/* ---- Attachments (v1.1) ---- */
+.msg-user { flex-direction: column; align-items: flex-end; gap: 6px; }
+.attach-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.composer-wrap .attach-strip { padding: 8px 12px 0; }
+.msg-user .attach-strip { justify-content: flex-end; max-width: 84%; }
+.attach-item { position: relative; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); background: var(--app-surface); }
+.attach-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-pdf img { object-fit: cover; object-position: top; }
+.attach-icon { display: grid; place-items: center; width: 100%; height: 100%; color: var(--dsw-alias-label-tertiary); }
+.attach-badge { position: absolute; left: 0; right: 0; bottom: 0; padding: 1px 4px; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; color: #fff; background: rgba(220, 38, 38, .88); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.attach-remove { position: absolute; top: 3px; right: 3px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%; color: #fff; background: rgba(0, 0, 0, .55); }
+.composer-wrap { flex: none; display: flex; flex-direction: column; }
+.composer-busy { display: flex; align-items: center; gap: 4px; padding: 6px 16px 0; font-size: 12.5px; color: var(--dsw-alias-label-tertiary); }
+.composer-busy .typing i { width: 5px; height: 5px; }
+.attach-btn { flex: none; display: grid; place-items: center; width: 40px; height: 44px; margin-right: -4px; padding: 0; border: none; background: none; color: var(--dsw-alias-label-secondary); }
+.attach-btn:disabled { opacity: .4; }

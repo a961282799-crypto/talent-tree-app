@@ -2,6 +2,8 @@
  * AI services the app can talk to. All of them speak the OpenAI-compatible
  * chat-completions API with tool calls; only the address, key and model differ.
  * Model ids change often: the lists are suggestions, any id can be typed in.
+ * `visionModel` reads attached images (the tutor model itself only gets text);
+ * empty means none is known for that service, and the learner can fill one in.
  */
 export const PROVIDERS = [
   {
@@ -10,6 +12,7 @@ export const PROVIDERS = [
     baseUrl: 'https://api.deepseek.com',
     models: ['deepseek-flash', 'deepseek-v4-pro'],
     keyUrl: 'https://platform.deepseek.com/api_keys',
+    visionModel: 'deepseek-v4-flash-vision-exp',
   },
   {
     id: 'qwen',
@@ -17,6 +20,7 @@ export const PROVIDERS = [
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     models: ['qwen-plus', 'qwen-max', 'qwen3.8-max'],
     keyUrl: 'https://bailian.console.aliyun.com/',
+    visionModel: 'qwen3-vl-plus',
   },
   {
     id: 'glm',
@@ -24,6 +28,7 @@ export const PROVIDERS = [
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     models: ['glm-5.1', 'glm-5'],
     keyUrl: 'https://open.bigmodel.cn/usercenter/apikeys',
+    visionModel: '',
   },
   {
     id: 'kimi',
@@ -31,6 +36,7 @@ export const PROVIDERS = [
     baseUrl: 'https://api.moonshot.cn/v1',
     models: ['kimi-k3'],
     keyUrl: 'https://platform.moonshot.cn/console/api-keys',
+    visionModel: '',
   },
   {
     id: 'doubao',
@@ -38,6 +44,7 @@ export const PROVIDERS = [
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     models: ['doubao-seed-1-8-251228'],
     keyUrl: 'https://console.volcengine.com/ark',
+    visionModel: '',
   },
   {
     id: 'siliconflow',
@@ -45,6 +52,7 @@ export const PROVIDERS = [
     baseUrl: 'https://api.siliconflow.cn/v1',
     models: ['deepseek-ai/DeepSeek-V3', 'Qwen/Qwen2.5-7B-Instruct'],
     keyUrl: 'https://cloud.siliconflow.cn/account/ak',
+    visionModel: '',
   },
   {
     id: 'openai',
@@ -52,6 +60,7 @@ export const PROVIDERS = [
     baseUrl: 'https://api.openai.com/v1',
     models: ['gpt-5.5', 'gpt-5.4-mini'],
     keyUrl: 'https://platform.openai.com/api-keys',
+    visionModel: 'gpt-5.5',
   },
   {
     id: 'custom',
@@ -59,6 +68,7 @@ export const PROVIDERS = [
     baseUrl: '',
     models: [],
     keyUrl: '',
+    visionModel: '',
   },
 ]
 
@@ -81,5 +91,6 @@ export function activeAI(settings) {
     apiKey: own.apiKey ?? '',
     baseUrl: own.baseUrl || preset.baseUrl,
     model: own.model || preset.models[0] || '',
+    visionModel: own.visionModel || preset.visionModel || '',
   }
 }

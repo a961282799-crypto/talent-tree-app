@@ -185,9 +185,13 @@ export function stop(chatId) {
  * until it answers. Progress is published through storage (chat messages and
  * the `live` entry), so screens can come and go while it runs.
  * @param {(event: object) => void} [onEvent] - called with each tool display event
- * @param {string} [label] - what the chat shows instead of `text` (prompts written for the model)
+ * @param {string|{ label?: string, action?: boolean, attachments?: object[] }} [extra]
+ *   A string is the label of an app button (a prompt written for the model, shown as
+ *   `label`); an object carries the shown text and attachments of the learner's own message.
  */
-export async function send(chatId, text, onEvent, label) {
+export async function send(chatId, text, onEvent, extra) {
+  const opts = typeof extra === 'string' ? { label: extra, action: true } : (extra || {})
+  const label = opts.label
   if (controllers.has(chatId)) return
   const controller = new AbortController()
   controllers.set(chatId, controller)
@@ -195,8 +199,8 @@ export async function send(chatId, text, onEvent, label) {
   if (text) {
     updateChat(chatId, c => ({
       ...c,
-      title: c.title || (label || text).replace(/\s+/g, ' ').slice(0, 40),
-      messages: [...c.messages.filter(m => m.role !== 'error'), { role: 'user', content: text, ...(label ? { label } : {}), at: Date.now() }],
+      title: c.title || (label || text).replace(/\s+/g, ' ').slice(0, 40) || (opts.attachments?.[0]?.name ?? ''),
+      messages: [...c.messages.filter(m => m.role !== 'error'), { role: 'user', content: text, ...(label !== undefined ? { label } : {}), action: opts.action === true, ...(opts.attachments?.length ? { attachments: opts.attachments } : {}), at: Date.now() }],
     }))
   } else {
     updateChat(chatId, c => ({ ...c, messages: c.messages.filter(m => m.role !== 'error') }))
@@ -204,7 +208,8 @@ export async function send(chatId, text, onEvent, label) {
   // Lighting rules for this turn: only the learner's own words can light a node,
   // and each node rises at most one level per reply (see executeTool).
   const lastUser = [...getState().chats[chatId].messages].reverse().find(m => m.role === 'user')
-  const turn = { learnerAnswered: Boolean(lastUser && !lastUser.label), raised: new Set() }
+  // Messages saved before the `action` flag existed carried a label only when they came from a button.
+  const turn = { learnerAnswered: Boolean(lastUser && !(lastUser.action ?? Boolean(lastUser.label))), raised: new Set() }
   try {
     for (let round = 0; ; round++) {
       if (round >= MAX_ROUNDS) throw new AiError(t('error.loop'), 'loop')
