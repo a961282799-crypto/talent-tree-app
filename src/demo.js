@@ -59,11 +59,11 @@ export function seedDemo() {
       { role: 'user', content: '我想学会「拉格朗日中值定理」。请用 techtree_plan 帮我生成学习天赋树，然后告诉我从哪里开始。', label: '我想学会「拉格朗日中值定理」' },
       call('c1', 'techtree_plan', plan),
       { role: 'tool', tool_call_id: 'c1', content: planned.text, display: planned.display },
-      { role: 'assistant', content: '天赋树生成好了，一共 **8** 个知识点 🌳\n\n现在可以学的是 **极限** 和 **构造辅助函数**。先从极限开始：\n\n> 💡 $0.999\\ldots$ 真的等于 $1$ 吗？\n\n你觉得呢？提示：想想 $$\\lim_{n\\to\\infty}\\left(1-\\frac{1}{10^n}\\right)$$ 等于多少。' },
+      { role: 'assistant', content: '天赋树生成好了，一共 **8** 个知识点 🌳 主线是这样走的：\n\n```flow\n极限 -> 导数的定义 -> 费马引理 -> 罗尔定理 -> 拉格朗日中值定理\n```\n\n先从 **极限** 开始：\n\n> 💡 $0.999\\ldots$ 真的等于 $1$ 吗？\n\n你觉得呢？提示：想想 $$\\lim_{n\\to\\infty}\\left(1-\\frac{1}{10^n}\\right)$$ 等于多少。' },
       { role: 'user', content: '等于 1，因为 0.999… 和 1 的差距可以小于任何正数，所以只能是 0。' },
       call('c2', 'techtree_record', { node_id: 'limit', level: 2, evidence: '能解释 0.999…=1：差距可以任意小' }),
       { role: 'tool', tool_call_id: 'c2', content: lit.text, display: lit.display },
-      { role: 'assistant', content: '完全正确 🎉 你抓住了极限的核心：**差距可以任意小**。极限点亮为银色！\n\n你的「连续性」已经 5 天没复习了，有空记得点一下"今日复习"。下一个推荐学 **费马引理**——山顶为什么是平的？' },
+      { role: 'assistant', content: "完全正确 🎉 你抓住了极限的核心：**差距可以任意小**。极限点亮为银色！\n\n下一个学 **费马引理**。先别管公式，把函数图像想成一座山：\n\n```plot\n{\"title\":\"小球在山坡上滚\",\"x\":[0,4],\"y\":[0,4],\"curves\":[{\"fn\":\"3-(x-2)^2\",\"label\":\"山的轮廓\"}],\"points\":[{\"x\":\"t\",\"y\":\"3-(t-2)^2\",\"label\":\"P\"}],\"segments\":[{\"from\":[\"t\",\"3-(t-2)^2\"],\"to\":[\"t+1\",\"3-(t-2)^2-2(t-2)\"],\"extend\":true,\"label\":\"切线\",\"color\":\"gold\"}],\"slider\":{\"name\":\"t\",\"min\":0.6,\"max\":3.4,\"value\":1,\"label\":\"P 的位置\"}}\n```\n\n拖动滑块，让 P 点爬到山顶。**切线在山顶会变成什么样？**\n\n```choices\n变成水平的\n变得更陡\n没想法，给点提示\n```" },
     ],
   }))
 }

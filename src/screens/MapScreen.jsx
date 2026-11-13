@@ -4,7 +4,7 @@ import { useApp } from '../storage.js'
 import { libraryOf, useNav } from '../nav.js'
 import { fill, t } from '../i18n.js'
 import { Empty, Stage, exportPng, stats } from '../tree.js'
-import { BackIcon, MoreIcon } from '../icons.jsx'
+import { BackIcon, MoreIcon, ChevronIcon } from '../icons.jsx'
 import { MergeSheet } from './MergeSheet.jsx'
 
 /**
@@ -91,12 +91,15 @@ export function MapCard({ knowledge, onOpen }) {
   const sharedCount = Object.values(count).filter(c => c > 1).length
   return (
     <button type="button" className="map-card" onClick={onOpen}>
-      <span className="map-card-icon">🗺️</span>
+      <svg className="map-card-icon" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M9 30 20 20 31 27 M20 20 14 9 M20 20 30 11" />
+        <circle cx="9" cy="30" r="3.2" /><circle cx="31" cy="27" r="3.2" /><circle cx="14" cy="9" r="3.2" /><circle cx="30" cy="11" r="3.2" /><circle cx="20" cy="20" r="4.6" className="on" />
+      </svg>
       <span className="map-card-body">
         <b>{t('map.title')}</b>
         <span>{fill(t('map.cardMeta'), { points: all.size, goals: entries.length, shared: sharedCount })}</span>
       </span>
-      <span className="plan-card-go">{t('chat.plan.open')} ›</span>
+      <span className="plan-card-go">{t('chat.plan.open')}<ChevronIcon size={16} /></span>
     </button>
   )
 }

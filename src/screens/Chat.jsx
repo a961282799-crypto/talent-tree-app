@@ -6,6 +6,8 @@ import { MAX_IMAGES, MAX_PDFS, prepareMessage, readAttachment } from '../attachm
 import { onToolEvent, useNav } from '../nav.js'
 import { send, stop } from '../ai.js'
 import { renderMarkdown } from '../markdown.js'
+import { splitBlocks } from '../figure.js'
+import { Choices, Flow, Pending, Plot } from '../Figure.jsx'
 import { fill, t } from '../i18n.js'
 import { ClockIcon, ProgressRing, StarIcon, TreeIcon, reviewQueue, richToPlain, stats } from '../tree.js'
 import { AlertIcon, BackIcon, ChevronIcon, CloseSmallIcon, FileIcon, PaperclipIcon, SendIcon, StopIcon } from '../icons.jsx'
@@ -13,6 +15,27 @@ import { AlertIcon, BackIcon, ChevronIcon, CloseSmallIcon, FileIcon, PaperclipIc
 function Markdown({ text }) {
   const html = useMemo(() => renderMarkdown(text), [text])
   return <div className="md" dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+/**
+ * One AI reply: Markdown, with graphs, step chains and tappable choices where
+ * the tutor used them. `onPick` is set only on the latest reply, so older
+ * choices cannot be tapped.
+ */
+function AiMessage({ text, onPick, live }) {
+  const blocks = useMemo(() => splitBlocks(text), [text])
+  return (
+    <div className="msg msg-ai">
+      {blocks.map((b, i) => {
+        if (b.type === 'md') return <Markdown key={i} text={b.text} />
+        if (b.pending) return b.type === 'choices' ? null : <Pending key={i} />
+        if (b.type === 'plot') return <Plot key={i} raw={b.raw} />
+        if (b.type === 'flow') return <Flow key={i} raw={b.raw} />
+        return <Choices key={i} raw={b.raw} onPick={onPick} />
+      })}
+      {live && <span className="caret" />}
+    </div>
+  )
 }
 
 const LEVEL = l => t(`level.${l}`)
@@ -187,6 +210,9 @@ export function Chat({ chatId }) {
 
   if (!chat) return null
   const doSend = (text, extra) => { stick.current = true; send(chatId, text, onToolEvent, extra) }
+  // A tapped choice is a guess, not the learner's own words: it is sent as an app action, so it cannot light a point.
+  const pick = option => doSend(fill(t('prompt.pick'), { option }), option)
+  const lastIsReply = chat.messages[chat.messages.length - 1]?.role === 'assistant'
   const title = goals.length ? goals.map(g => richToPlain(g.name)).join(' · ') : chat.title || t('chat.untitled')
 
   return (
@@ -227,7 +253,7 @@ export function Chat({ chatId }) {
               </div>
             )
           }
-          if (m.role === 'assistant') return m.content ? <div key={i} className="msg msg-ai"><Markdown text={m.content} /></div> : null
+          if (m.role === 'assistant') return m.content ? <AiMessage key={i} text={m.content} onPick={!live && i === chat.messages.length - 1 ? pick : undefined} /> : null
           if (m.role === 'tool') return <div key={i} className="msg msg-tool"><ToolPill display={m.display} onOpenTree={openTree} knowledge={knowledge} /></div>
           if (m.role === 'error') {
             return (
@@ -248,15 +274,17 @@ export function Chat({ chatId }) {
         })}
         {live && (
           live.content
-            ? <div className="msg msg-ai"><Markdown text={live.content} /><span className="caret" /></div>
+            ? <AiMessage text={live.content} live />
             : <div className="msg msg-ai"><span className="typing"><i /><i /><i /></span><span className="muted">{t(live.status === 'tools' ? 'chat.tool.running' : 'chat.thinking')}</span></div>
         )}
       </div>
 
-      {goals.length > 0 && !live && chat.messages.length > 0 && (
+      {!live && chat.messages.length > 0 && (goals.length > 0 || lastIsReply) && (
         <div className="quick">
-          <button type="button" className="chip" onClick={openTree}><TreeIcon size={15} /> {t('chip.open')}</button>
-          <button type="button" className="chip" onClick={() => doSend(t('prompt.next'), t('label.next'))}>{t('tree.continue')}</button>
+          {lastIsReply && ['hint', 'rephrase', 'example', 'draw'].map(k => (
+            <button key={k} type="button" className="chip chip-help" onClick={() => doSend(t(`prompt.help.${k}`), t(`help.${k}`))}>{t(`help.${k}`)}</button>
+          ))}
+          {goals.length > 0 && <button type="button" className="chip" onClick={() => doSend(t('prompt.next'), t('label.next'))}>{t('tree.continue')}</button>}
           {due > 0 && <button type="button" className="chip chip-due" onClick={() => doSend(fill(t('prompt.reviewBatch'), { n: due, list: reviewQueue(nodes, Date.now()).map(n => `${richToPlain(n.name)}（${n.id}）`).join('、') }), fill(t('label.reviewBatch'), { n: due }))}>{fill(t('review.today'), { n: due })}</button>}
         </div>
       )}

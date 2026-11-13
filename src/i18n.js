@@ -347,6 +347,19 @@ const zhApp = {
   'common.back': '返回',
   'common.cancel': '取消',
   'common.ok': '好',
+  'fig.drawing': '正在画图…',
+  'fig.plot': '函数图',
+  'fig.drag': '拖动滑块看变化',
+  'fig.choices': '选一个',
+  'help.hint': '给点提示',
+  'help.rephrase': '没看懂，换个说法',
+  'help.example': '举个例子',
+  'help.draw': '画个图',
+  'prompt.help.hint': '我卡住了。先给我一个小提示，不要直接说答案，然后让我再试一次。',
+  'prompt.help.rephrase': '刚才那段我没看懂。请换一种更直白的说法再讲一遍：先用生活里的比方，少用术语和符号，能画图就画图，然后再问我。',
+  'prompt.help.example': '请用一个带具体数字的小例子把刚才讲的走一遍，然后让我自己试一个类似的。',
+  'prompt.help.draw': '请把刚才讲的内容画成图（用 plot 或 flow 代码块），图下面用一两句话告诉我该看哪里，然后再问我。',
+  'prompt.pick': '我选：{option}',
 }
 
 const enApp = {
@@ -521,6 +534,19 @@ const enApp = {
   'common.back': 'Back',
   'common.cancel': 'Cancel',
   'common.ok': 'OK',
+  'fig.drawing': 'Drawing…',
+  'fig.plot': 'Graph',
+  'fig.drag': 'Drag to see it change',
+  'fig.choices': 'Pick one',
+  'help.hint': 'Give me a hint',
+  'help.rephrase': 'Say it another way',
+  'help.example': 'Show an example',
+  'help.draw': 'Draw it',
+  'prompt.help.hint': 'I am stuck. Give me a small hint without the answer, then let me try again.',
+  'prompt.help.rephrase': 'I did not follow that. Explain it again more plainly: start with an everyday comparison, use fewer terms and symbols, draw a picture if you can, then ask me again.',
+  'prompt.help.example': 'Walk through what you just explained with a small example using concrete numbers, then let me try a similar one myself.',
+  'prompt.help.draw': 'Draw what you just explained as a picture (a plot or flow block), tell me in a sentence or two what to look at, then ask me again.',
+  'prompt.pick': 'I pick: {option}',
 }
 
 const zh = { ...zhBase, ...zhApp }

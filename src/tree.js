@@ -509,7 +509,7 @@ async function exportPng(t, title, nodes, goalIds) {
     const fromLit = byId[p].mastery >= 1
     const toLit = n.mastery >= 1
     c.setLineDash(fromLit && toLit ? [] : fromLit ? [7, 7] : [3, 6])
-    c.strokeStyle = fromLit && toLit ? EXPORT_MEDAL[Math.min(byId[p].mastery, n.mastery)] : fromLit ? '#4d6bfe' : '#b8bec8'
+    c.strokeStyle = fromLit && toLit ? EXPORT_MEDAL[Math.min(byId[p].mastery, n.mastery)] : fromLit ? '#2747d6' : '#b8bec8'
     c.lineWidth = fromLit && toLit ? 2.6 : fromLit ? 2.2 : 1.5
     c.beginPath(); c.moveTo(x1, y1); c.bezierCurveTo(x1, my, x2, my, x2, y2); c.stroke()
   }))
@@ -532,7 +532,7 @@ async function exportPng(t, title, nodes, goalIds) {
     c.restore()
     c.setLineDash(state === 'available' ? [5, 4] : [])
     c.lineWidth = goalIds.has(n.id) ? 2.4 : 1.5
-    c.strokeStyle = n.weak ? '#f08a24' : state === 'lit' ? EXPORT_MEDAL[m] : state === 'available' ? '#4d6bfe' : '#d5d9df'
+    c.strokeStyle = n.weak ? '#f08a24' : state === 'lit' ? EXPORT_MEDAL[m] : state === 'available' ? '#2747d6' : '#d5d9df'
     c.lineWidth = n.type === 'theorem' ? Math.max(c.lineWidth, 2) : c.lineWidth
     c.beginPath(); c.roundRect(x, y, NODE_W, cardH, radii); c.stroke()
     if (n.type === 'method') {
@@ -545,7 +545,7 @@ async function exportPng(t, title, nodes, goalIds) {
     const by = y + NODE_H / 2
     c.fillStyle = state === 'lit' ? EXPORT_MEDAL[m] : state === 'available' ? '#dfe5ff' : '#e6e8ec'
     exportBadgePath(c, n.type, bx, by, 17); c.fill()
-    c.fillStyle = state === 'lit' ? '#ffffff' : state === 'available' ? '#4d6bfe' : '#8f959e'
+    c.fillStyle = state === 'lit' ? '#ffffff' : state === 'available' ? '#2747d6' : '#8f959e'
     c.font = `700 15px ${EXPORT_FONT}`
     c.textAlign = 'center'
     c.textBaseline = 'middle'

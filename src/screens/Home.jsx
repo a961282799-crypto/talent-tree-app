@@ -96,10 +96,14 @@ export function Home() {
         <div className="brand"><TreeIcon size={26} /><span>{t('app.name')}</span></div>
       </header>
       <div className="scroll">
-        <section className="intro">
-          <p className="slogan">{t('app.slogan')}</p>
+        <section className="hero">
+          <svg className="hero-art" viewBox="0 0 150 120" aria-hidden="true">
+            <path d="M22 96 62 62 M62 62 104 78 M62 62 88 24 M88 24 132 14 M104 78 138 58" />
+            <circle cx="22" cy="96" r="5" className="on" /><circle cx="62" cy="62" r="6" className="on" />
+            <circle cx="104" cy="78" r="4.5" /><circle cx="88" cy="24" r="5" /><circle cx="132" cy="14" r="4" /><circle cx="138" cy="58" r="3.5" />
+          </svg>
           <h1>{t('home.hello')}</h1>
-          <p>{t('home.sub')}</p>
+          <p className="hero-slogan">{t('app.slogan')}</p>
           <GoalForm onGoal={nav.startGoal} />
           {entries.length === 0 && (
             <div className="examples">
