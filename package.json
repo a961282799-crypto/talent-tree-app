@@ -1,6 +1,6 @@
 {
   "name": "talent-tree-app",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "每个知识点，都连着另一个知识点。学习天赋树：AI 帮你理清前置知识，学会一个点亮一个。Android / iOS App。",
   "author": "Tao",
