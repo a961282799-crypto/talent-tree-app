@@ -1,5 +1,7 @@
 apply plugin: 'com.android.application'
 
+def githubUpdates = providers.gradleProperty('githubUpdates').map { it == 'true' }.getOrElse(false)
+
 android {
     namespace = "com.tao.talenttree"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -10,12 +12,19 @@ android {
         // CI passes these from the release tag (see .github/workflows/android.yml).
         versionCode Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
         versionName System.getenv("VERSION_NAME") ?: "1.0.0"
+        buildConfigField 'boolean', 'GITHUB_UPDATES', 'false'
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    if (githubUpdates) {
+        sourceSets.release.manifest.srcFile 'src/github/AndroidManifest.xml'
     }
     // Release signing: a keystore given through environment variables (GitHub Actions secrets).
     // Without them the release build stays unsigned and CI ships a debug APK instead.
@@ -32,6 +41,7 @@ android {
     }
     buildTypes {
         release {
+            buildConfigField 'boolean', 'GITHUB_UPDATES', githubUpdates.toString()
             if (keystorePath) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

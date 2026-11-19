@@ -5,6 +5,8 @@
 
 **下载安卓版**：到 [Releases](../../releases/latest) 下载最新的 `talent-tree-x.y.z.apk`，在手机上打开安装（需要允许"安装未知来源应用"）。打开后在「设置」里选 AI 服务商并填 API Key。
 
+**安卓版更新**：支持更新的 GitHub 签名 APK 会在打开 App 时检查新版本，也可以在「设置 → 检查更新」手动查询。发现新版后，点「下载并安装」，按 Android 提示允许「学习天赋树」安装应用并确认覆盖更新。已有旧版的用户需要先从 Releases 覆盖安装一次带有更新功能的 APK。Google Play 和 iOS 通过各自商店更新。
+
 说一句"我想学会拉格朗日中值定理"，AI 把它拆成一张前置知识图，像游戏里的天赋树一样显示出来。你通过讲解或小测证明自己会了，对应节点才会点亮（铜 / 银 / 金）。
 
 这个 App 由 DeepSeek Harness 插件 `dsh-talent-tree` 改造而来：插件原来依赖 DSH 提供对话，现在 App 自带 AI 对话页，直接调用 DeepSeek（或任何 OpenAI 兼容接口），三个工具 `techtree_plan / techtree_record / techtree_view` 在手机本地执行，知识地图和对话都存在手机里。
@@ -75,6 +77,7 @@ npm test         # 跑测试
 - **发一个新版本**：在 GitHub 网页上进入 **Releases → Draft a new release**，在 "Choose a tag" 里输入新版本号（比如 `v1.0.1`，必须以 `v` 开头）并选择创建，然后点 **Publish release**。大约 5–10 分钟后，签好名的 `.apk`（给用户下载安装）和 `.aab`（上传 Google Play 用）会自动出现在这个 Release 下面。
 - **只想试打一个包**：进入 **Actions → Android APK → Run workflow**，跑完后在这次运行的 Artifacts 里下载。
 - 签名用的是仓库 Secrets 里的 4 个值（`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`）。密钥文件本身只在你电脑的 `release-key/` 文件夹里，不会上传到仓库，**一定要另外备份**：丢了就无法再给已安装的用户发更新。
+- App 从 GitHub Releases 检查 `vX.Y.Z` 正式版及对应的签名 `talent-tree-X.Y.Z.apk`。发版流程通过 `assembleRelease -PgithubUpdates=true` 启用 APK 内的更新功能，使用默认的 `bundleRelease` 构建 Google Play 的 AAB。
 
 ## 打包 iOS
 

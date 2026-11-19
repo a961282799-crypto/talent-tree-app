@@ -59,7 +59,16 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          if [ "$HAS_KEY" = "true" ]; then ./gradlew --no-daemon assembleRelease bundleRelease; else ./gradlew --no-daemon assembleDebug; fi
+          if [ "$HAS_KEY" = "true" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              ./gradlew --no-daemon assembleRelease -PgithubUpdates=true
+              ./gradlew --no-daemon bundleRelease
+            else
+              ./gradlew --no-daemon assembleRelease bundleRelease
+            fi
+          else
+            ./gradlew --no-daemon assembleDebug
+          fi
 
       - name: Collect files
         run: |

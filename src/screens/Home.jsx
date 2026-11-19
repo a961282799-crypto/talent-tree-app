@@ -78,7 +78,7 @@ function ReviewCard({ due, onStart }) {
   )
 }
 
-export function Home() {
+export function Home({ updateVersion }) {
   const nav = useNav()
   const knowledge = useApp(s => s.knowledge)
   const chats = useApp(s => s.chats)
@@ -113,6 +113,12 @@ export function Home() {
           )}
         </section>
 
+        {updateVersion && (
+          <button type="button" className="banner banner-info" onClick={nav.openSettings}>
+            <span>{fill(t('update.available'), { v: updateVersion })}</span>
+            <b>{t('update.view')}</b>
+          </button>
+        )}
         {import.meta.env.VITE_DEMO && <p className="banner banner-info">{t('home.preview')}</p>}
         {!hasKey && !import.meta.env.VITE_DEMO && (
           <button type="button" className="banner" onClick={nav.openSettings}>

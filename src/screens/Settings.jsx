@@ -13,7 +13,7 @@ const LANGUAGES = [
   { id: 'en', label: () => 'English' },
 ]
 
-export function Settings() {
+export function Settings({ updates }) {
   const nav = useNav()
   const settings = useApp(s => s.settings)
   const [show, setShow] = useState(false)
@@ -68,6 +68,23 @@ export function Settings() {
     <div className="screen">
       <header className="topbar topbar-home"><div className="brand"><span>{t('settings.title')}</span></div></header>
       <div className="scroll settings">
+        {updates.enabled && (
+          <section className="group">
+            <p className="small">{fill(t('settings.version'), { v: updates.version || VERSION })}</p>
+            {updates.release && <p className="small">{fill(t('update.available'), { v: updates.release.version })}</p>}
+            {updates.release && (
+              <button type="button" className="row-btn" disabled={Boolean(updates.busy)} onClick={updates.install}>
+                {t('update.download')}
+              </button>
+            )}
+            <button type="button" className="row-btn" disabled={Boolean(updates.busy)} onClick={() => updates.check(true)}>
+              {t('update.check')}
+            </button>
+            <p className="muted small" role="status">
+              {updates.busy ? t(`update.${updates.busy}`) : updates.status ? t(updates.status) : null}
+            </p>
+          </section>
+        )}
         <h2 className="section-title">{t('settings.ai')}</h2>
         <div className="group">
           <label className="field">
@@ -171,7 +188,7 @@ export function Settings() {
 
         <h2 className="section-title">{t('settings.about')}</h2>
         <div className="group">
-          <p className="small">{t('app.name')} · {fill(t('settings.version'), { v: VERSION })}</p>
+          <p className="small">{t('app.name')}{!updates.enabled && ` · ${fill(t('settings.version'), { v: VERSION })}`}</p>
           <p className="muted small">{t('settings.privacy')}</p>
         </div>
       </div>

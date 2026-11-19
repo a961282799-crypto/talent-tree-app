@@ -13,6 +13,7 @@ import { Chats } from './screens/Chats.jsx'
 import { Settings } from './screens/Settings.jsx'
 import { Onboarding } from './screens/Onboarding.jsx'
 import { MapScreen } from './screens/MapScreen.jsx'
+import { useUpdates } from './useUpdates.js'
 
 const TABS = [
   { id: 'trees', icon: TreeIcon, label: 'tab.trees' },
@@ -60,13 +61,14 @@ export function App() {
   const language = useApp(s => s.settings.language ?? 'system')
   // First run: the guide shows until finished or skipped. People upgrading from 1.0 already have data and skip it.
   const onboarding = useApp(s => !s.settings.onboarded && (Boolean(import.meta.env.VITE_DEMO) || (Object.keys(s.knowledge.nodes).length === 0 && Object.keys(s.chats).length === 0)))
+  const updates = useUpdates(onboarding)
   return (
     <NavContext.Provider value={nav}>
       <div className="app" key={language}>
         <div className="tab-content" hidden={Boolean(top)}>
-          {tab === 'trees' && <Home />}
+          {tab === 'trees' && <Home updateVersion={updates.release?.version} />}
           {tab === 'chats' && <Chats />}
-          {tab === 'settings' && <Settings />}
+          {tab === 'settings' && <Settings updates={updates} />}
           <nav className="tabbar">
             {TABS.map(({ id, icon: Icon, label }) => (
               <button key={id} type="button" className={id === tab ? 'active' : ''} aria-current={id === tab ? 'page' : undefined} onClick={() => setTab(id)}>
